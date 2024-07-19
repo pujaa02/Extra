@@ -72,3 +72,19 @@ ratingsWithMenuAndRestaurant.forEach(({ rating, menu }) => {
   console.log(`Restaurant ID: ${restaurantId}`);
   console.log(`Restaurant Name: ${restaurantName}`);
 });
+
+
+interface Menuall {
+    rating: number;
+    menu: {
+        id: number;
+        item_name: string;
+        price: number;
+        image: string | null;
+        restaurant: {
+            id: number;
+            name: string;
+        };
+
+    }
+}
