@@ -1,77 +1,215 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-    <div id="calendar" class="bg-white shadow-lg rounded-lg p-6 w-96">
-        <div id="calendar-header" class="flex justify-between items-center mb-4">
-            <button id="prev-month" class="text-gray-600 hover:text-gray-800">&lt;</button>
-            <div id="month-year" class="text-lg font-semibold text-gray-700"></div>
-            <button id="next-month" class="text-gray-600 hover:text-gray-800">&gt;</button>
-        </div>
-        <div id="calendar-days" class="grid grid-cols-7 gap-2 text-center">
-            <div class="font-semibold text-gray-600">Sun</div>
-            <div class="font-semibold text-gray-600">Mon</div>
-            <div class="font-semibold text-gray-600">Tue</div>
-            <div class="font-semibold text-gray-600">Wed</div>
-            <div class="font-semibold text-gray-600">Thu</div>
-            <div class="font-semibold text-gray-600">Fri</div>
-            <div class="font-semibold text-gray-600">Sat</div>
-        </div>
-        <div id="calendar-dates" class="grid grid-cols-7 gap-2 text-center mt-2"></div>
-    </div>
-    <script src="calendar.js"></script>
-</body>
-</html>
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarHeader = document.getElementById('month-year');
-    const calendarDates = document.getElementById('calendar-dates');
-    const prevMonthBtn = document.getElementById('prev-month');
-    const nextMonthBtn = document.getElementById('next-month');
-
-    let date = new Date();
-
-    function renderCalendar() {
-        calendarDates.innerHTML = '';
-        const month = date.getMonth();
-        const year = date.getFullYear();
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const lastDate = new Date(year, month + 1, 0).getDate();
-
-        calendarHeader.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
-
-        for (let i = 0; i < firstDay; i++) {
-            const emptyCell = document.createElement('div');
-            calendarDates.appendChild(emptyCell);
-        }
-
-        for (let i = 1; i <= lastDate; i++) {
-            const dateCell = document.createElement('div');
-            dateCell.textContent = i;
-            dateCell.classList.add('p-2', 'rounded-full', 'hover:bg-blue-100', 'cursor-pointer');
-            if (i === date.getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) {
-                dateCell.classList.add('bg-blue-500', 'text-white');
-            }
-            calendarDates.appendChild(dateCell);
-        }
+// =============sum of two number===========
+const sum = (a, b) => {
+    return a + b;
+  };
+  console.log("1. sum of two number = ", sum(45, 25));
+  
+  //==============find maximum in array===========
+  
+  const array = [15, 95, 45, 87, 100, 10, 49];
+  
+  const findmax = (arr) => {
+    let max = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] > max) {
+        max = arr[i];
+      }
     }
-
-    prevMonthBtn.addEventListener('click', () => {
-        date.setMonth(date.getMonth() - 1);
-        renderCalendar();
-    });
-
-    nextMonthBtn.addEventListener('click', () => {
-        date.setMonth(date.getMonth() + 1);
-        renderCalendar();
-    });
-
-    renderCalendar();
-});
+    return max;
+    //   return Math.max(...arr);
+  };
+  
+  console.log("2. find maximum in array = ", findmax(array));
+  
+  // ========== check given string is palindrom or not===========
+  
+  const string = "racecar";
+  
+  const checkpalindrome = (str) => {
+    let temp = str,
+      finalstr = "";
+    const length = str.length;
+    for (let i = length - 1; i >= 0; i--) {
+      finalstr = finalstr.concat(str[i]);
+    }
+    if (finalstr == temp) {
+      return true;
+    } else {
+      return false;
+    }
+    //   return str==str.split('').reverse().join('');
+  };
+  
+  console.log("3. check palindrome = ", checkpalindrome(string));
+  
+  // =============  reverse given string
+  
+  const reversestr = (str) => {
+    return str.split("").reverse().join("");
+  };
+  
+  console.log(
+    "4. reverse string 'Puja Moravadiya' = ",
+    reversestr("Puja Moravadiya")
+  );
+  
+  // 5. Write a JavaScript function that takes an array of numbers and returns a new array with only the even numbers.
+  
+  const evennumarr = (arr) => {
+    let finalarr = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] % 2 == 0) {
+        finalarr.push(arr[i]);
+      }
+    }
+    return finalarr;
+    //   return arr.filter((num) => num % 2 === 0);
+  };
+  const numsofeven = array.filter((num) => num % 2 == 0);
+  console.log(numsofeven, "evennnnnnnnnnnnn");
+  console.log("5. return even num array = ", evennumarr(array));
+  
+  // 6. Write a JavaScript program to calculate the factorial of a given number.
+  
+  const factorial = (num) => {
+    if (num == 0 || num == 1) {
+      return 1;
+    } else {
+      return num * factorial(num - 1);
+    }
+  };
+  
+  console.log("6. factorial of 5 = ", factorial(5));
+  
+  //7. Write a JavaScript function to check if a given number is prime.
+  
+  const prime = (num) => {
+    if (num <= 1) {
+      return false;
+    }
+    for (let i = 2; i < Math.sqrt(num); i++) {
+      if (num % i === 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+  
+  console.log("7. check prime number  = ", prime(2));
+  
+  // 8. Write a JavaScript program to find the largest element in a nested array.
+  
+  const largest = (arr) => {
+    let ele = [];
+    for (let i = 0; i < arr.length; i++) {
+      ele.push(Math.max(...arr[i]));
+    }
+    return Math.max(...ele);
+  };
+  
+  console.log(
+    "8. find largest in nested array  = ",
+    largest([
+      [45, 87, 25],
+      [78, 95, 26],
+      [54, 87, 29],
+    ])
+  );
+  
+  // 9.  Write a JavaScript function that returns the Fibonacci sequence up to a given number of terms.
+  
+  const fibo = (num) => {
+    let arr = [0, 1];
+    if (num == 0) {
+      return [];
+    } else if (num == 1) {
+      return [0];
+    } else {
+      for (let i = 1; i <= num - 2; i++) {
+        arr.push(arr[i] + arr[i - 1]);
+      }
+      return arr;
+    }
+  
+    //second (sorted)
+    //   if (num == 0) {
+    //     return [];
+    //   } else if (num == 1) {
+    //     return [0];
+    //   } else {
+    //     let arr = [0, 1];
+    //     while (arr.length < num) {
+    //       arr.push(arr[arr.length - 1] + arr[arr.length - 2]);
+    //     }
+    //     return arr;
+    //   }
+  };
+  
+  console.log("9. print fibonacci  = ", fibo(10));
+  
+  // 10. Write a JavaScript program to convert a string to title case (capitalize the first letter of each word).
+  
+  function toTitleCase(str) {
+    return str.replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+  
+  console.log("10. first letter capitalization  = ", toTitleCase("puja"));
+  
+  const traveler = [
+    { description: "Senior", Amount: 50 },
+    { description: "junior", Amount: 50 },
+    { description: "Adult", Amount: 75 },
+    { description: "Child", Amount: 35 },
+    { description: "Infant", Amount: 25 },
+  ];
+  
+  // const ans = [...new Set(traveler.map((obj) => obj.description))];
+  
+  const ans = traveler.filter((value, index, self) => {
+    return self.findIndex((v) => v.Amount === value.Amount) === index;
+  });
+  // const ans = traveler.reduce((sum, {Amount}) => sum + Amount,0);
+  
+  console.log(traveler.reduce((n, { Amount }) => n + Amount, 0));
+  
+  console.log(ans);
+  
+  const arr = [5, 2, 8, 5, 8, 2, 8, 7, 2];
+  
+  const maxelement = Math.max(...arr);
+  
+  const firstindex = arr.indexOf(maxelement);
+  
+  const secondindex = arr.indexOf(maxelement, firstindex + 1);
+  
+  const thir = arr.lastIndexOf(maxelement);
+  
+  const foutrh = arr.lastIndexOf(maxelement, thir - 1);
+  
+  console.log(maxelement, firstindex, secondindex, thir, foutrh);
+  
+  // const answer=arr.filter((value,index)=>{
+  //     return arr.indexOf(value)===index
+  // })
+  
+  // const originalArr = [1, 2, 3, 4, 5];
+  
+  // console.log(originalArr.reverse())
+  // console.log("Try programiz.pro");
+  // let arr = [
+  //     'geeks', 2, 'geeks', 2, 'Javascript', 4,
+  //     'Javascript', 5, 'for', 6, 'Javascript', 1,
+  //     'for', 5, 7, 8, 'for'
+  // ];
+  
+  // const counter = {};
+  
+  // arr.forEach(ele => {
+  //     if (counter[ele]) {
+  //         counter[ele] += 1;
+  //     } else {
+  //         counter[ele] = 1;
+  //     }
+  // });
+  
+  // console.log(counter)
