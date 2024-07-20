@@ -28,3 +28,18 @@ join food_delivery.restaurant on restaurant.id=menu.restaurant_id;
 
 select rating.menu_id,(avg(rating.rating),2)
 from food_delivery.rating group by rating.menu_id;
+
+
+const averageRatings = await prisma.rating.groupBy({
+  by: ['menuId'],
+  _avg: {
+    rating: true,
+  },
+});
+
+const formattedAverageRatings = averageRatings.map(rating => ({
+  menuId: rating.menuId,
+  avgRating: rating._avg.rating ? rating._avg.rating.toFixed(2) : null, // Handle null cases
+}));
+
+console.log(formattedAverageRatings);
