@@ -1,4 +1,30 @@
-const data = [
+interface Restaurant {
+  id: number;
+  name: string;
+}
+
+interface MenuItem {
+  id: number;
+  item_name: string;
+  price: number;
+  image: string;
+  restaurant: Restaurant;
+  menu_id?: number;
+  avgrate?: string;
+}
+
+interface RestaurantRating {
+  name: string;
+  ratings: number[];
+}
+
+interface RestaurantAverage {
+  restaurant_id: number;
+  restaurant_name: string;
+  average_rating: number | null;
+}
+
+const data: MenuItem[] = [
   {
     id: 2,
     item_name: 'sandwich',
@@ -117,7 +143,7 @@ const data = [
 ];
 
 // Group by restaurant ID
-const groupedByRestaurant = data.reduce((acc, item) => {
+const groupedByRestaurant: { [key: number]: RestaurantRating } = data.reduce((acc, item) => {
   const restaurantId = item.restaurant.id;
   if (!acc[restaurantId]) {
     acc[restaurantId] = { name: item.restaurant.name, ratings: [] };
@@ -126,10 +152,10 @@ const groupedByRestaurant = data.reduce((acc, item) => {
     acc[restaurantId].ratings.push(parseFloat(item.avgrate));
   }
   return acc;
-}, {});
+}, {} as { [key: number]: RestaurantRating });
 
 // Calculate average rating for each restaurant
-const restaurantAverages = Object.entries(groupedByRestaurant).map(([id, { name, ratings }]) => {
+const restaurantAverages: RestaurantAverage[] = Object.entries(groupedByRestaurant).map(([id, { name, ratings }]) => {
   const averageRating = ratings.length > 0 ? ratings.reduce((sum, rate) => sum + rate, 0) / ratings.length : null;
   return {
     restaurant_id: parseInt(id),
