@@ -1,4 +1,4 @@
-[
+const data = [
   {
     id: 2,
     item_name: 'sandwich',
@@ -114,4 +114,28 @@
     menu_id: 1,
     avgrate: '3.9'
   }
-]
+];
+
+// Group by restaurant ID
+const groupedByRestaurant = data.reduce((acc, item) => {
+  const restaurantId = item.restaurant.id;
+  if (!acc[restaurantId]) {
+    acc[restaurantId] = { name: item.restaurant.name, ratings: [] };
+  }
+  if (item.avgrate) {
+    acc[restaurantId].ratings.push(parseFloat(item.avgrate));
+  }
+  return acc;
+}, {});
+
+// Calculate average rating for each restaurant
+const restaurantAverages = Object.entries(groupedByRestaurant).map(([id, { name, ratings }]) => {
+  const averageRating = ratings.length > 0 ? ratings.reduce((sum, rate) => sum + rate, 0) / ratings.length : null;
+  return {
+    restaurant_id: parseInt(id),
+    restaurant_name: name,
+    average_rating: averageRating
+  };
+});
+
+console.log(restaurantAverages);
