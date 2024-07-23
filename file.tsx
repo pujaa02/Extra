@@ -1,4 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// utils.ts
+import { Dispatch } from 'redux';
+import { removeuser, unvisible } from "../../Store/Reducers/actions";
+import Cookies from "js-cookie";
+import { NavigateFunction } from 'react-router-dom';
+
+export const handleGlobalError = (error: any, dispatch: Dispatch, navigate: NavigateFunction) => {
+    if (error.message === "Request failed with status code 404") {
+        dispatch(removeuser());
+        dispatch(unvisible());
+        Cookies.remove("token");
+        navigate("/login");
+    } else {
+        console.error("Unhandled error:", error);
+    }
+};
+
+
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import instance from "../../../Hooks/useAxios";
@@ -9,10 +26,11 @@ import { Rest, RestaurantAttributes } from "../../../Types/restaurant";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { removeuser, unvisible } from "../../Store/Reducers/actions";
+import { handleGlobalError } from "../../../utils";  // Import the utility function
 
 const Restaurant: React.FC = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate()
+    const navigate = useNavigate();
     const user = useSelector((state: State_user) => state.user);
     const [restaurantdata, setRestaurantData] = useState<RestaurantAttributes>();
     const [preview, setPreview] = useState<string | null>(null);
@@ -51,12 +69,7 @@ const Restaurant: React.FC = () => {
                 }
             });
         } catch (error: any) {
-            if (error.message === "Request failed with status code 404") {
-                dispatch(removeuser());
-                dispatch(unvisible());
-                Cookies.remove("token")
-                navigate("/login")
-            }
+            handleGlobalError(error, dispatch, navigate);  // Use the utility function
         }
     };
 
@@ -74,12 +87,7 @@ const Restaurant: React.FC = () => {
                 }
             });
         } catch (error: any) {
-            if (error.message === "Request failed with status code 404") {
-                dispatch(removeuser());
-                dispatch(unvisible());
-                Cookies.remove("token")
-                navigate("/login")
-            }
+            handleGlobalError(error, dispatch, navigate);  // Use the utility function
         }
     };
 
@@ -215,5 +223,4 @@ const Restaurant: React.FC = () => {
 };
 
 export default Restaurant;
-
-
+                                                     
