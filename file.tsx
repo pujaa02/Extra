@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { ChatData } from "../../../Types/chat";
 import { io } from 'socket.io-client';
-import "./chat.css"
+import "./chat.css";
 import instance from "../../../Hooks/useAxios";
 import { REACT_APP_BACKEND_URL } from "../../../config";
 import { RestaurantAverage } from "../../../Types/restaurant";
@@ -10,7 +10,6 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { handleError } from "../../../utils/util";
 import toast from "react-hot-toast";
-
 
 const socket = io(`${REACT_APP_BACKEND_URL}`);
 
@@ -26,12 +25,12 @@ const AdminChat: React.FC = () => {
             url: "/home/toprestaurant",
             method: "GET",
         })
-            .then((res) => {
-                setRestaurant(res.data.data);
-            })
-            .catch((e) => {
-                console.log(e);
-            });
+        .then((res) => {
+            setRestaurant(res.data.data);
+        })
+        .catch((e) => {
+            console.log(e);
+        });
     };
 
     useEffect(() => {
@@ -41,19 +40,31 @@ const AdminChat: React.FC = () => {
     useEffect(() => {
         socket.on('message', (msg: string) => {
             console.log(msg, "message");
-        })
+        });
         return () => {
-            socket.off('message')
-        }
-    }, [])
+            socket.off('message');
+        };
+    }, []);
 
     const handlerestID: SubmitHandler<ChatData> = async (data: ChatData) => {
+        if (restaurant.length === 0) {
+            console.log("Restaurant data is not yet loaded");
+            return;
+        }
+        
         console.log(data.restaurant_id);
         console.log(restaurant, "restaurant");
+
         const itemInCart = restaurant.filter(item => item.restaurant_id === data.restaurant_id);
         console.log(itemInCart);
 
+        if (itemInCart.length > 0) {
+            setReceiverID(data.restaurant_id);
+        } else {
+            toast.error("Restaurant not found");
+        }
     }
+
     const handleinput: SubmitHandler<ChatData> = async (data: ChatData) => {
         console.log(data, "data");
         console.log(receiverID, "receiverid");
@@ -71,9 +82,10 @@ const AdminChat: React.FC = () => {
                 }
             }).catch((error) => {
                 handleError(error, dispatch, navigate);
-            })
+            });
         }
     }
+
     return (
         <div>
             <div className="absolute ml-3 top-44">
@@ -92,7 +104,6 @@ const AdminChat: React.FC = () => {
                         {errors.restaurant_id && <p className="text-red-600">{errors.restaurant_id.message}</p>}
                         <button type="submit" className=" ml-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Submit</button>
                     </div>
-
                 </form>
             </div>
             {receiverID && <div className="chat_container">
@@ -114,7 +125,6 @@ const AdminChat: React.FC = () => {
                     </form>
                 </div>
             </div>}
-
         </div>
     );
 }
