@@ -1,226 +1,122 @@
-// utils.ts
-import { Dispatch } from 'redux';
-import { removeuser, unvisible } from "../../Store/Reducers/actions";
-import Cookies from "js-cookie";
-import { NavigateFunction } from 'react-router-dom';
-
-export const handleGlobalError = (error: any, dispatch: Dispatch, navigate: NavigateFunction) => {
-    if (error.message === "Request failed with status code 404") {
-        dispatch(removeuser());
-        dispatch(unvisible());
-        Cookies.remove("token");
-        navigate("/login");
-    } else {
-        console.error("Unhandled error:", error);
-    }
-};
-
-
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
+import { ChatData } from "../../../Types/chat";
+import { io } from 'socket.io-client';
+import "./chat.css"
 import instance from "../../../Hooks/useAxios";
-import { State_user } from "../../../Types/reducer";
-import { useDispatch, useSelector } from "react-redux";
-import toast from "react-hot-toast";
-import { Rest, RestaurantAttributes } from "../../../Types/restaurant";
-import Cookies from "js-cookie";
+import { REACT_APP_BACKEND_URL } from "../../../config";
+import { RestaurantAverage } from "../../../Types/restaurant";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { removeuser, unvisible } from "../../Store/Reducers/actions";
-import { handleGlobalError } from "../../../utils";  // Import the utility function
+import { handleError } from "../../../utils/util";
+import toast from "react-hot-toast";
 
-const Restaurant: React.FC = () => {
+
+const socket = io(`${REACT_APP_BACKEND_URL}`);
+
+const AdminChat: React.FC = () => {
+    const [restaurant, setRestaurant] = useState<RestaurantAverage[]>([]);
+    const [receiverID, setReceiverID] = useState<number>();
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const user = useSelector((state: State_user) => state.user);
-    const [restaurantdata, setRestaurantData] = useState<RestaurantAttributes>();
-    const [preview, setPreview] = useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
-    const { register, handleSubmit, setValue, formState: { errors } } = useForm<RestaurantAttributes>({ defaultValues: restaurantdata });
+    const { register, handleSubmit, formState: { errors }, } = useForm<ChatData>();
 
-    const handlerestaurant: SubmitHandler<RestaurantAttributes> = async (data: RestaurantAttributes) => {
-        const form_data = new FormData();
-        Object.entries(data).forEach(([key, value]) => {
-            form_data.append(key, value as string | Blob);
-        });
-
-        if (selectedImage) {
-            form_data.append('image', selectedImage);
-        }
-
-        const url = restaurantdata
-            ? `restaurant/updaterestaurant/${restaurantdata.id}/${user.id}`
-            : `restaurant/addrestaurant/${user.id}`;
-
-        const method = restaurantdata ? 'POST' : 'POST';
-
-        try {
-            await instance({
-                url,
-                method,
-                data: form_data,
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            }).then((res) => {
-                if (res.data.message === "success" || res.data.message === "restaurant updated Successfully") {
-                    toast.success("Successfully Updated");
-                } else {
-                    toast.error("Please Enter Valid Data");
-                }
+    const fetchall = async () => {
+        await instance({
+            url: "/home/toprestaurant",
+            method: "GET",
+        })
+            .then((res) => {
+                setRestaurant(res.data.data);
+            })
+            .catch((e) => {
+                console.log(e);
             });
-        } catch (error: any) {
-            handleGlobalError(error, dispatch, navigate);  // Use the utility function
-        }
-    };
-
-    const fetchrestaurantdata = async () => {
-        try {
-            await instance({
-                url: `restaurant/getrestaurantdata/${user.id}`,
-                method: "GET",
-            }).then((res) => {
-                if (res.data.message === "success") {
-                    setRestaurantData(res.data.result[0]);
-                    const result_data: RestaurantAttributes = res.data.result[0];
-                    setPreview(`${process.env.REACT_APP_IMAGEURL}` + result_data.image);
-                    Object.entries(result_data).forEach(([key, value]) => setValue(key as keyof Rest, value));
-                }
-            });
-        } catch (error: any) {
-            handleGlobalError(error, dispatch, navigate);  // Use the utility function
-        }
     };
 
     useEffect(() => {
-        fetchrestaurantdata();
-    }, [user]);
+        fetchall();
+    }, []);
 
-    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0] || null;
-        if (file) {
-            const fileSize = file.size / 1024 / 1024;
-            const fileType = file.type.split("/")[0];
-            if (fileType !== "image") {
-                alert("Please select a valid image file.");
-                return;
-            }
-            if (fileSize > 5) {
-                alert("Image size should be less than 5MB.");
-                return;
-            }
-            setSelectedImage(file);
-            setPreview(URL.createObjectURL(file));
+    useEffect(() => {
+        socket.on('message', (msg: string) => {
+            console.log(msg, "message");
+        })
+        return () => {
+            socket.off('message')
         }
-    };
+    }, [])
 
+    const handlerestID: SubmitHandler<ChatData> = async (data: ChatData) => {
+        console.log(data.restaurant_id);
+        console.log(restaurant, "restaurant");
+        const itemInCart = restaurant.filter(item => item.restaurant_id === data.restaurant_id);
+        console.log(itemInCart);
+
+    }
+    const handleinput: SubmitHandler<ChatData> = async (data: ChatData) => {
+        console.log(data, "data");
+        console.log(receiverID, "receiverid");
+        if (data.message.trim()) {
+            socket.emit('message', data.message);
+            await instance({
+                url: `chat/addchatdata/1/${receiverID}`,
+                method: 'POST',
+                data: data,
+            }).then((res) => {
+                if (res.data.message === "success") {
+                    toast.success("Successfully Added");
+                } else {
+                    toast.error("Please Enter Valid Data");
+                }
+            }).catch((error) => {
+                handleError(error, dispatch, navigate);
+            })
+        }
+    }
     return (
-        <div className="absolute top-56 right-96 mr-12  bg-slate-400 p-8 rounded-lg">
-            <h2 className="text-center text-3xl font-bold mb-5">Restaurant Detail</h2>
-            <form onSubmit={handleSubmit(handlerestaurant)} className="space-y-6">
-                <div className="flex">
-                    <div className="form-group">
-                        {preview && (
-                            <img
-                                src={preview}
-                                alt="Image Preview"
-                                className="w-56 h-48 rounded-t-lg"
-                            />
-                        )}
-                        <label
-                            htmlFor="image"
-                            className="text-center bg-red-600 w-56 p-2 block text-xl  text-slate-200 font-bold"
+        <div>
+            <div className="absolute ml-3 top-44">
+                <form onSubmit={handleSubmit(handlerestID)} className="space-y-6">
+                    <label htmlFor="restaurant_id" className="text-xl font-bold text-slate-600">Select Restaurant to open the Chat</label>
+                    <div className=" form-group flex">
+                        <select id="restaurant_id" className="form-control"  {...register("restaurant_id", {
+                            required: "select Restaurant first",
+                        })}
                         >
-                            Upload Image
-                        </label>
-                        <input
-                            type="file"
-                            id="image"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
+                            <option value="">Select Restaurant</option>
+                            {restaurant.map((data: RestaurantAverage) => (
+                                <option key={data.restaurant_id} value={data.restaurant_id}>{data.restaurant_name}</option>
+                            ))}
+                        </select>
+                        {errors.restaurant_id && <p className="text-red-600">{errors.restaurant_id.message}</p>}
+                        <button type="submit" className=" ml-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Submit</button>
                     </div>
-                    <div className="ml-28">
-                        <div className="form-group">
-                            <label
-                                htmlFor="name"
-                                className="block text-xl font-medium text-gray-700"
-                            >
-                                Restaurant Name
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                {...register("name", {
-                                    required: "Restaurant Name is Required!!",
-                                })}
-                                className="my-2 form-control text-sm w-96 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3"
-                            />
-                            {errors.name && (
-                                <p className="text-red-500 text-sm mt-1">
-                                    {errors.name.message}
-                                </p>
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label
-                                htmlFor="phone"
-                                className="block text-xl font-medium text-gray-700"
-                            >
-                                Mobile Number:
-                            </label>
-                            <input
-                                type="text"
-                                id="phone"
-                                {...register("phone", {
-                                    required: "Restaurant number is Required!!",
-                                    pattern: {
-                                        value: /^\d{10}$/,
-                                        message: "Enter Valid Mobile Number",
-                                    },
-                                })}
-                                className="my-2 form-control text-sm w-96 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3"
-                            />
-                            {errors.phone && (
-                                <p className="text-red-500 text-sm mt-1">
-                                    {errors.phone.message}
-                                </p>
-                            )}
-                        </div>
 
-                        <div className="form-group">
-                            <label
-                                htmlFor="address"
-                                className="block text-xl font-medium text-gray-700"
-                            >
-                                Address:
-                            </label>
+                </form>
+            </div>
+            {receiverID && <div className="chat_container">
+                <div className="upper_container">
+                </div>
+                <div className="bottom_container">
+                    <form onSubmit={handleSubmit(handleinput)} className="space-y-6">
+                        <div className="form-group flex">
                             <input
                                 type="text"
-                                id="address"
-                                {...register("address", {
-                                    required: "Restaurant address is Required!!",
+                                placeholder="message..."
+                                id="name"
+                                {...register("message", {
                                 })}
-                                className="my-2 form-control text-sm w-96 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3"
+                                className="ml-2 mt-2 py-2 px-2"
                             />
-                            {errors.address && (
-                                <p className="text-red-500 text-sm mt-1">
-                                    {errors.address.message}
-                                </p>
-                            )}
+                            <button className="sendbtn" type="submit">Send</button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-                <button
-                    type="submit"
-                    className="ml-56 btn btn-primary inline-flex justify-center py-3 px-10 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                    Submit
-                </button>
-            </form>
+            </div>}
+
         </div>
     );
-};
+}
 
-export default Restaurant;
-                                                     
+export default AdminChat;
