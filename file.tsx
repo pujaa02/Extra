@@ -1,25 +1,3 @@
-import { Action, State_restID } from "../../../Types/reducer";
-
-export interface State_restID {
-    receiverID: number;
-}
-
-const initialState: State_restID = {
-    receiverID: 0
-};
-
-export default function restIDReducer(state = initialState, action: Action) {
-    switch (action.type) {
-        case 'ADD_RESTAURANT_ID':
-            return { ...state, receiverID: action.payload.id };
-        case 'REMOVE_RESTAURANT_ID':
-            return { ...state, receiverID: 0 };
-        default:
-            return state;
-    }
-}
-
-
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { ChatAttributes, ChatData } from "../../../Types/chat";
@@ -42,54 +20,60 @@ const AdminChat: React.FC = () => {
     const [chat, setChat] = useState<ChatAttributes[]>([])
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { register, handleSubmit } = useForm<ChatData>();
+    const { register, handleSubmit, reset } = useForm<ChatData>();
 
+    // Fetch all chat data for the selected receiver ID
     const fetchallchat = async (id: number) => {
         await instance({
             url: "/chat/getchatdata",
             method: "GET",
         })
-            .then((res) => {
-                const result = res.data.result.filter((obj: ChatAttributes) => obj.sender_id === id || obj.receiver_id === id);
-                setChat(result);
-            })
-            .catch((error) => {
-                handleError(error, dispatch, navigate);
-            });
+        .then((res) => {
+            const result = res.data.result.filter((obj: ChatAttributes) => obj.sender_id === id || obj.receiver_id === id);
+            setChat(result);
+        })
+        .catch((error) => {
+            handleError(error, dispatch, navigate);
+        });
     }
 
+    // Fetch top restaurants
     const fetchall = async () => {
         await instance({
             url: "/home/toprestaurant",
             method: "GET",
         })
-            .then((res) => {
-                setRestaurant(res.data.data);
-            })
-            .catch((e) => {
-                console.log(e);
-            });
+        .then((res) => {
+            setRestaurant(res.data.data);
+        })
+        .catch((e) => {
+            console.log(e);
+        });
     };
 
+    // Initial fetch of restaurants
     useEffect(() => {
         fetchall();
     }, []);
 
+    // Fetch chat data when receiverID changes
     useEffect(() => {
         if (receiverID) {
             fetchallchat(receiverID);
         }
     }, [receiverID]);
 
+    // Listen for incoming messages
     useEffect(() => {
-        socket.on('message', (msg: string) => {
-            console.log(msg, "message");
+        socket.on('message', (msg: ChatAttributes) => {
+            setChat((prevChat) => [...prevChat, msg]);
         });
         return () => {
             socket.off('message');
         };
     }, []);
 
+    // Handle restaurant selection change
     const changeID = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const item = restaurant.find(obj => obj.restaurant_id === Number(event.target.value));
         if (item) {
@@ -97,14 +81,28 @@ const AdminChat: React.FC = () => {
         }
     }
 
+    // Handle form submission to send a new message
     const handleinput: SubmitHandler<ChatData> = async (data: ChatData) => {
         if (data.message.trim()) {
-            socket.emit('message', data.message);
+            const newMessage: ChatAttributes = {
+                sender_id: 1, // Assuming 1 is the ID of the admin
+                receiver_id: receiverID,
+                message: data.message,
+                timestamp: new Date().toISOString(),
+            };
+
+            socket.emit('message', newMessage);
+
             await instance({
                 url: `chat/addchatdata/1/${receiverID}`,
                 method: 'POST',
-                data: data,
-            }).catch((error) => {
+                data: newMessage,
+            })
+            .then(() => {
+                setChat((prevChat) => [...prevChat, newMessage]);
+                reset();
+            })
+            .catch((error) => {
                 handleError(error, dispatch, navigate);
             });
         }
@@ -126,23 +124,33 @@ const AdminChat: React.FC = () => {
                     </select>
                 </div>
             </div>
-            {receiverID && <div className="chat_container">
-                <div className="upper_container"></div>
-                <div className="bottom_container">
-                    <form onSubmit={handleSubmit(handleinput)} className="space-y-6">
-                        <div className="form-group flex">
-                            <input
-                                type="text"
-                                placeholder="message..."
-                                id="name"
-                                {...register("message", {})}
-                                className="ml-2 mt-2 py-2 px-2"
-                            />
-                            <button className="sendbtn" type="submit">Send</button>
-                        </div>
-                    </form>
+            {receiverID && (
+                <div className="chat_container">
+                    <div className="upper_container">
+                        <ul>
+                            {chat.map((msg, index) => (
+                                <li key={index}>
+                                    {msg.sender_id === 1 ? 'You' : 'User'}: {msg.message}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="bottom_container">
+                        <form onSubmit={handleSubmit(handleinput)} className="space-y-6">
+                            <div className="form-group flex">
+                                <input
+                                    type="text"
+                                    placeholder="message..."
+                                    id="message"
+                                    {...register("message", {})}
+                                    className="ml-2 mt-2 py-2 px-2"
+                                />
+                                <button className="sendbtn" type="submit">Send</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </div>}
+            )}
         </div>
     );
 }
