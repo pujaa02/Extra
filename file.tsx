@@ -1,159 +1,69 @@
-import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { ChatAttributes, ChatData } from "../../../Types/chat";
-import { io } from 'socket.io-client';
-import "./chat.css";
-import instance from "../../../Hooks/useAxios";
-import { REACT_APP_BACKEND_URL } from "../../../config";
-import { RestaurantAverage } from "../../../Types/restaurant";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { handleError } from "../../../utils/util";
-import { addrestid } from "../../Store/Reducers/actions";
-import { State } from "../../../Types/reducer";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useState } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import Register from "./components/Register/Register";
+import Login from "./components/Login/Login";
+import ForgetPass from "./components/Forgetpassword/ForgetPassword";
+import Home from "./components/Home/Home";
+import Profile from "./components/Container/Profile/Profile"
+import Order from "./components/Container/Order/Order";
+import Cart from "./components/Cart/Cart";
+import MainLayout from "./components/Container/MainLayout";
+import { useSelector } from "react-redux";
+import { State_sidebar, State_user } from "./Types/reducer";
+import Restaurant from "./components/Container/Restaurant/Restaurant";
+import Menu from "./components/Container/Menu/Menu";
+import Rest_Home from "./components/Home/Rest_Home";
+import { CheckUser, ProtectedRoute } from "./protectedroutes/ProtectedRoute";
+import Data from "./components/Home/Data";
+import Chat from "./components/Container/chat/Chat";
+import AdminChat from "./components/Container/chat/AdminChat";
+import Admin_Home from "./components/Home/Admin_Home";
 
-const socket = io(`${REACT_APP_BACKEND_URL}`);
 
-const AdminChat: React.FC = () => {
-    const receiverID = useSelector((state: State) => state.restID.receiverID);
-    const [restaurant, setRestaurant] = useState<RestaurantAverage[]>([]);
-    const [chat, setChat] = useState<ChatAttributes[]>([])
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const { register, handleSubmit, reset } = useForm<ChatData>();
+const App: React.FC = () => {
+  const user = useSelector((state: State_user) => state.user);
+  const sidebarvisibility = useSelector((state: State_sidebar) => state.show);
+  const [defaultComponent, setDefaultComponent] = useState("profile");
 
-    // Fetch all chat data for the selected receiver ID
-    const fetchallchat = async (id: number) => {
-        await instance({
-            url: "/chat/getchatdata",
-            method: "GET",
-        })
-        .then((res) => {
-            const result = res.data.result.filter((obj: ChatAttributes) => obj.sender_id === id || obj.receiver_id === id);
-            setChat(result);
-        })
-        .catch((error) => {
-            handleError(error, dispatch, navigate);
-        });
-    }
+  return (
+    <div className="App">
+      <div>
+        <Routes>
+          {if(user.id===2) {
+            <Route path="/" element={<Rest_Home />} />
+          } else if (user.id ===4 ) {
+            <Route path="/" element={<Home />} />
+          } else{
+            <Route path="/" element={<Admin_Home />} />
+          }}
+          {/* {user.role_id === 2 ? <Route path="/" element={<Rest_Home />} /> : <Route path="/" element={<Home />} />} */}
+          <Route path="/data" element={<Data />} />
 
-    // Fetch top restaurants
-    const fetchall = async () => {
-        await instance({
-            url: "/home/toprestaurant",
-            method: "GET",
-        })
-        .then((res) => {
-            setRestaurant(res.data.data);
-        })
-        .catch((e) => {
-            console.log(e);
-        });
-    };
+          <Route path="/cart" element={<Cart />} />
+          <Route
+            path="/dashboard"
+            element={
+              <MainLayout
+                sidebarVisible={sidebarvisibility}
+                defaultComponent={defaultComponent}
+              />
+            }
+          >
+            <Route path="profile" element={<ProtectedRoute component={Profile} />} />
+            <Route path="order" element={<ProtectedRoute component={Order} />} />
+            <Route path="restaurant" element={<ProtectedRoute component={Restaurant} />} />
+            <Route path="menu" element={<ProtectedRoute component={Menu} />} />
+            <Route path="chat" element={<ProtectedRoute component={user.role_id === 1 ? AdminChat : Chat} />} />
+          </Route>
+          <Route path="/register" element={<CheckUser component={Register} />} />
+          <Route path="/login" element={<CheckUser component={Login} />} />
+          <Route path="/forgetpassword" element={<ForgetPass />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </div>
+  );
+};
 
-    // Initial fetch of restaurants
-    useEffect(() => {
-        fetchall();
-    }, []);
-
-    // Fetch chat data when receiverID changes
-    useEffect(() => {
-        if (receiverID) {
-            fetchallchat(receiverID);
-        }
-    }, [receiverID]);
-
-    // Listen for incoming messages
-    useEffect(() => {
-        socket.on('message', (msg: ChatAttributes) => {
-            setChat((prevChat) => [...prevChat, msg]);
-        });
-        return () => {
-            socket.off('message');
-        };
-    }, []);
-
-    // Handle restaurant selection change
-    const changeID = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const item = restaurant.find(obj => obj.restaurant_id === Number(event.target.value));
-        if (item) {
-            dispatch(addrestid(item.user_id));
-        }
-    }
-
-    // Handle form submission to send a new message
-    const handleinput: SubmitHandler<ChatData> = async (data: ChatData) => {
-        if (data.message.trim()) {
-            const newMessage: ChatAttributes = {
-                sender_id: 1, // Assuming 1 is the ID of the admin
-                receiver_id: receiverID,
-                message: data.message,
-                timestamp: new Date().toISOString(),
-            };
-
-            // Send message via Socket.io
-            socket.emit('message', newMessage);
-
-            // Send message to the backend
-            await instance({
-                url: `chat/addchatdata/1/${receiverID}`,
-                method: 'POST',
-                data: newMessage,
-            })
-            .then(() => {
-                reset(); // Reset the input form
-            })
-            .catch((error) => {
-                handleError(error, dispatch, navigate);
-            });
-        }
-    }
-
-    return (
-        <div>
-            <div className="absolute ml-3 top-44">
-                <label htmlFor="restaurant_id" className="text-xl font-bold text-slate-600">Select Restaurant to open the Chat</label>
-                <div className="form-group flex">
-                    <select id="restaurant_id" className="form-control" {...register("restaurant_id", {
-                        required: true,
-                        onChange: (e) => { changeID(e) }
-                    })}>
-                        <option value="">Select Restaurant</option>
-                        {restaurant.map((data: RestaurantAverage) => (
-                            <option key={data.restaurant_id} value={data.restaurant_id}>{data.restaurant_name}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-            {receiverID && (
-                <div className="chat_container">
-                    <div className="upper_container">
-                        <ul>
-                            {chat.map((msg, index) => (
-                                <li key={index}>
-                                    {msg.sender_id === 1 ? 'You' : 'User'}: {msg.message}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="bottom_container">
-                        <form onSubmit={handleSubmit(handleinput)} className="space-y-6">
-                            <div className="form-group flex">
-                                <input
-                                    type="text"
-                                    placeholder="message..."
-                                    id="message"
-                                    {...register("message", {})}
-                                    className="ml-2 mt-2 py-2 px-2"
-                                />
-                                <button className="sendbtn" type="submit">Send</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-export default AdminChat;
+export default App;
