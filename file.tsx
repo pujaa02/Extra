@@ -13,12 +13,11 @@ import { useSelector } from "react-redux";
 import { State_sidebar, State_user } from "./Types/reducer";
 import Restaurant from "./components/Container/Restaurant/Restaurant";
 import Menu from "./components/Container/Menu/Menu";
-import Rest_Home from "./components/Home/Rest_Home";
+import Rest_Home from "./components/Home/restaurant/Rest_Home";
 import { CheckUser, ProtectedRoute } from "./protectedroutes/ProtectedRoute";
-import Data from "./components/Home/Data";
 import Chat from "./components/Container/chat/Chat";
 import AdminChat from "./components/Container/chat/AdminChat";
-import Admin_Home from "./components/Home/Admin_Home";
+import Admin_Home from "./components/Home/Admin/Admin_Home";
 
 
 const App: React.FC = () => {
@@ -27,20 +26,14 @@ const App: React.FC = () => {
   const [defaultComponent, setDefaultComponent] = useState("profile");
 
   return (
-    <div className="App">
+    <div className="overflow-hidden">
       <div>
         <Routes>
-          {if(user.id===2) {
-            <Route path="/" element={<Rest_Home />} />
-          } else if (user.id ===4 ) {
-            <Route path="/" element={<Home />} />
-          } else{
-            <Route path="/" element={<Admin_Home />} />
-          }}
-          {/* {user.role_id === 2 ? <Route path="/" element={<Rest_Home />} /> : <Route path="/" element={<Home />} />} */}
-          <Route path="/data" element={<Data />} />
-
-          <Route path="/cart" element={<Cart />} />
+          {user.role_id === 2 && <Route path="/" element={<Rest_Home />} />}
+          {user.role_id === 1 && <Route path="/" element={<Admin_Home />} />}
+          {user.role_id === 4 && <Route path="/" element={<Home />} />}
+          <Route path="/" element={<Home />} />
+          {(!user || user.role_id === 4) && <Route path="/cart" element={<Cart />} />}
           <Route
             path="/dashboard"
             element={
@@ -50,11 +43,14 @@ const App: React.FC = () => {
               />
             }
           >
-            <Route path="profile" element={<ProtectedRoute component={Profile} />} />
-            <Route path="order" element={<ProtectedRoute component={Order} />} />
-            <Route path="restaurant" element={<ProtectedRoute component={Restaurant} />} />
-            <Route path="menu" element={<ProtectedRoute component={Menu} />} />
-            <Route path="chat" element={<ProtectedRoute component={user.role_id === 1 ? AdminChat : Chat} />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="profile" element={<Profile />} />
+              {user.role_id === 4 && <Route path="order" element={<Order />} />}
+              {user.role_id === 2 && <Route path="restaurant" element={< Restaurant />} />}
+              {user.role_id === 2 && <Route path="menu" element={<Menu />} />}
+              {user.role_id === 1 && <Route path="chat" element={<AdminChat />} />}
+              {user.role_id === 2 && <Route path="chat" element={<Chat />} />}
+            </Route>
           </Route>
           <Route path="/register" element={<CheckUser component={Register} />} />
           <Route path="/login" element={<CheckUser component={Login} />} />
