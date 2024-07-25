@@ -1,39 +1,65 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import Register from "./components/Register/Register";
-import Login from "./modules/Login/Login";
-import ForgetPass from "./modules/Forgetpassword/ForgetPassword";
-import Home from "./modules/Home/Home";
-import Profile from "./components/Container/Profile/Profile"
-import Order from "./components/Container/Order/Order";
-import Cart from "./components/Cart/Cart";
-import MainLayout from "./components/Container/MainLayout";
-import { useSelector } from "react-redux";
-import { State_sidebar, State_user } from "./Types/reducer";
-import Restaurant from "./components/Container/Restaurant/Restaurant";
-import Menu from "./components/Container/Menu/Menu";
-import Rest_Home from "./modules/Home/restaurant/Rest_Home";
-import { CheckUser, ProtectedRoute } from "./protectedroutes/ProtectedRoute";
-import Chat from "./components/Container/chat/Chat";
-import AdminChat from "./components/Container/chat/AdminChat";
-import Admin_Home from "./modules/Home/Admin/Admin_Home";
-
+import React, { useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import Register from './modules/Register/Register';
+import Home from './modules/user/home/Home';
+import Profile from './modules/Container/Profile/Profile';
+import Order from './modules/user/Order/Order';
+import Cart from './modules/user/Cart/Cart';
+import MainLayout from './modules/Container/MainLayout';
+import { useSelector } from 'react-redux';
+import { State_sidebar, State_user } from './Types/reducer.types';
+import Restaurant from './modules/restaurant/RestaurantProfile/Restaurant';
+import Menu from './modules/restaurant/Menu/Menu';
+import Rest_Home from './modules/restaurant/home/Rest_Home';
+import Chat from './modules/restaurant/chat/Chat';
+import AdminChat from './modules/admin/chat/AdminChat';
+import { Login } from '@mui/icons-material';
+import ForgetPass from './modules/Forgetpassword/ForgetPassword';
+import Admin_Home from './modules/admin/home/Admin_Home';
+import { ProtectedRoute, CheckUser } from './utils/ProtectedRoute';
 
 const App: React.FC = () => {
   const user = useSelector((state: State_user) => state.user);
   const sidebarvisibility = useSelector((state: State_sidebar) => state.show);
-  const [defaultComponent, setDefaultComponent] = useState("profile");
+  const [defaultComponent, setDefaultComponent] = useState('profile');
 
   return (
     <div className="overflow-hidden">
       <div>
         <Routes>
-          {user.role_id === 2 && <Route path="/" element={<Rest_Home />} />}
-          {user.role_id === 1 && <Route path="/" element={<Admin_Home />} />}
-          {user.role_id === 4 && <Route path="/" element={<Home />} />}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <Rest_Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <Admin_Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={[4]}>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<Home />} />
-          {(!user || user.role_id === 4) && <Route path="/cart" element={<Cart />} />}
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute allowedRoles={[4]}>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
@@ -43,13 +69,40 @@ const App: React.FC = () => {
               />
             }
           >
-            <Route element={<ProtectedRoute />}>
+            <Route element={<ProtectedRoute allowedRoles={[1, 2, 4]} />}>
               <Route path="profile" element={<Profile />} />
-              {user.role_id === 4 && <Route path="order" element={<Order />} />}
-              {user.role_id === 2 && <Route path="restaurant" element={< Restaurant />} />}
-              {user.role_id === 2 && <Route path="menu" element={<Menu />} />}
-              {user.role_id === 1 && <Route path="chat" element={<AdminChat />} />}
-              {user.role_id === 2 && <Route path="chat" element={<Chat />} />}
+              <Route
+                path="order"
+                element={
+                  <ProtectedRoute allowedRoles={[4]}>
+                    <Order />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="restaurant"
+                element={
+                  <ProtectedRoute allowedRoles={[2]}>
+                    <Restaurant />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="menu"
+                element={
+                  <ProtectedRoute allowedRoles={[2]}>
+                    <Menu />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="chat"
+                element={
+                  <ProtectedRoute allowedRoles={[1, 2]}>
+                    {user.role_id === 1 ? <AdminChat /> : <Chat />}
+                  </ProtectedRoute>
+                }
+              />
             </Route>
           </Route>
           <Route path="/register" element={<CheckUser component={Register} />} />

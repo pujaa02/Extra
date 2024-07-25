@@ -1,10 +1,11 @@
-import { Action, State_restID } from "../../../Types/reducer";
+import { State_restID, Reducer_Action } from "../../Types/reducer.types";
+
 
 const initialState: State_restID = {
     receiverID: 0
 };
 
-export default function restIDReducer(state = initialState, action: Action) {
+export default function restIDReducer(state = initialState, action: Reducer_Action) {
     switch (action.type) {
         case 'ADD_RESTAURANT_ID':
             return { ...state, receiverID: action.payload.id };

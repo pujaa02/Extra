@@ -1,4 +1,6 @@
-import { Action, State_menu } from "../../../Types/reducer";
+import { Action } from "@reduxjs/toolkit";
+import { State_menu ,Reducer_Action} from "../../Types/reducer.types";
+
 
 const initialState: State_menu = {
     menu: [],
@@ -6,7 +8,7 @@ const initialState: State_menu = {
 };
 
 
-export default function menuReducer(state = initialState, action: Action) {
+export default function menuReducer(state = initialState, action: Reducer_Action) {
     switch (action.type) {
         case "ADD_MENU_ID":
             return {

@@ -1,11 +1,12 @@
-import { Action, State_restaurant } from "../../../Types/reducer";
+import { State_restaurant, Reducer_Action } from "../../Types/reducer.types";
+
 
 
 const initialState: State_restaurant = {
     restaurant: {},
 };
 
-export default function restaurantReducer(state = initialState, action: Action) {
+export default function restaurantReducer(state = initialState, action: Reducer_Action) {
     switch (action.type) {
         case "ADD_RESTAURANT":
             return state.restaurant = action.payload.restaurant;

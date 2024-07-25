@@ -1,9 +1,10 @@
-import { Action, State_user } from "../../../Types/reducer";
+import { State_user, Reducer_Action } from "../../Types/reducer.types";
+
 const initialState: State_user = {
     user: { bd: new Date() },
 }
 
-export default function userReducer(state = initialState, action: Action) {
+export default function userReducer(state = initialState, action: Reducer_Action) {
     switch (action.type) {
         case 'ADD_USER':
             return state.user = action.payload.user;

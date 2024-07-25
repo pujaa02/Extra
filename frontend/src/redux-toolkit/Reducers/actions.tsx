@@ -1,6 +1,7 @@
-import { Menu } from "../../../Types/menu";
-import { RegData } from "../../../Types/register";
-import { RestaurantAttributes } from "../../../Types/restaurant";
+import { Menu } from "../../Types/menu.types"
+import { RegData } from "../../Types/register.types"
+import { RestaurantAttributes } from "../../Types/restaurant.types"
+
 
 export const adduser = (user: RegData) => ({
     type: 'ADD_USER',
