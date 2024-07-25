@@ -1,18 +1,18 @@
 import { Request, Response, Router } from "express";
 import passport from "passport";
 import { auth } from "../middlewares/auth";
-import { userrouter } from "./user";
-import { restaurantrouter } from "./restaurant";
-import { menurouter } from "./menu";
-import { driverrouter } from "./driver";
-import { cartrouter } from "./cart";
-import { orderrouter } from "./order";
-import { ratingrouter } from "./rating";
-import { userValidation } from "../validations/user";
-import userController from "../controllers/user.controller";
-import loginController from "../controllers/login.controller";
-import { homerouter } from "./home";
-import { chatrouter } from "./chat";
+import { driverrouter } from "../modules/driver/routes/driver.routes";
+import { ratingrouter } from "../modules/rating/routes/rating.routes";
+import userController from "../modules/user/controller/user.controller";
+import { homerouter } from "../modules/home/routes/home.routes";
+import { chatrouter } from "../modules/chat/routes/chat.routes";
+import { cartrouter } from "../modules/cart/routes/cart.routes";
+import { menurouter } from "../modules/menu/routes/menu.routes";
+import { orderrouter } from "../modules/order/routes/order.routes";
+import { restaurantrouter } from "../modules/restaurant/routes/restaurant.routes";
+import { userrouter } from "../modules/user/routes/user.routes";
+import loginController from "../modules/userlogin/controller/login.controller";
+import { userValidation } from "../modules/user/validations/user";
 auth(passport)
 export const router = Router();
 
@@ -95,7 +95,7 @@ router.use(
 router.use('/v1/login', loginController.login);
 router.use('/v1/register', userValidation, userController.adduser);
 
-router.use("/v1/updatepass",userController.updatepassword);
+router.use("/v1/updatepass", userController.updatepassword);
 
 router.use('/dashboard', (req: Request, res: Response) => {
     res.json({ msg: 'welcome Please Login First' });

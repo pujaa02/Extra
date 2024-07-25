@@ -2,8 +2,8 @@
 import { Strategy } from 'passport-jwt';
 import { Request } from 'express';;
 import dotenv from "dotenv";
-import { findUser } from '../helper/user';
 import { JWT_SECRET } from '../config';
+import { findUser } from '../modules/user/repository/user.repository';
 dotenv.config();
 
 const getToken = (req: Request) => {
