@@ -1,6 +1,6 @@
 import { prisma } from "../../..";
 import { stringNumObject } from "../../../types/common";
-import { UserAttributes } from "../types/user.types";
+import { UserAttributes } from "../types/user";
 
 
 export async function userAddQuery(input: UserAttributes): Promise<UserAttributes> {

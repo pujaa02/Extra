@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from '../../../config';
-import { Payload } from '../../user/types/user.types';
 import { checkUserexist } from '../../user/repository/user.repository';
+import { Payload } from '../../user/types/user';
 
 const login = async (req: Request, res: Response) => {
     const email: string = req.body.email;

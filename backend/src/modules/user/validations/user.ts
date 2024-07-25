@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import Joi from 'joi';
-import { UserAttributes } from '../types/user.types';
+import { UserAttributes } from '../types/user';
 
 const validation = Joi.object({
     user_id: Joi.number(),

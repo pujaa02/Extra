@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { UserAttributes } from '../types/user.types';
 import bcrypt from 'bcryptjs';
 import { RestaurantAttributes } from '../../restaurant/types/restaurant.types';
 import { MenuAttributes } from '../../menu/types/menu.types';
 import { menuFetchQuery } from '../../menu/repository/menu.repository';
 import { restaurantFetchQuery } from '../../restaurant/repository/restaurant.repository';
 import { checkUserexist, userAddQuery, findUser, userUpdateQuery, userFetchquery } from '../repository/user.repository';
+import { UserAttributes } from '../types/user';
 
 function createRandomString(length: number): string {
   const chars: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
