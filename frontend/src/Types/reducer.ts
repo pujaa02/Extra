@@ -39,3 +39,4 @@ export interface State_menu {
 export interface State_restID {
     receiverID: number;
 }
+

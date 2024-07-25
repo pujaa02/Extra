@@ -2,13 +2,10 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { RegData } from "../../Types/register";
-import instance from "../../Hooks/useAxios";
+import instance from "../../base-axios/useAxios";
 import toast from "react-hot-toast";
-import {
-  checkValidDate,
-  emailValidationPattern,
-  phoneValidationPattern,
-} from "../Validations/registervalidation";
+import { checkValidDate, emailValidationPattern, phoneValidationPattern } from "./Validations/registervalidation";
+
 
 const Register: React.FC = () => {
   const navigate = useNavigate()

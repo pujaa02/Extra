@@ -8,9 +8,9 @@ import {
 } from "../../Validations/registervalidation";
 import { useDispatch, useSelector } from "react-redux";
 import { State_user } from "../../../Types/reducer";
-import instance from "../../../Hooks/useAxios";
+import instance from "../../../base-axios/useAxios";
 import toast from "react-hot-toast";
-import { adduser } from "../../Store/Reducers/actions";
+import { adduser } from "../../redux-toolkit/Reducers/actions";
 import "./profile.css";
 import { handleError } from "../../../utils/util";
 import { useNavigate } from "react-router-dom";

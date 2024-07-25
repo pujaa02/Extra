@@ -6,9 +6,9 @@ import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useDispatch, useSelector } from "react-redux";
 import { State, State_user } from "../../Types/reducer";
-import { emptycart, removerestid, removeuser, unvisible } from "../Store/Reducers/actions";
+import { emptycart, removerestid, removeuser, unvisible } from "../redux-toolkit/Reducers/actions";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import instance from "../../Hooks/useAxios";
+import instance from "../../base-axios/useAxios";
 import Cookies from "js-cookie";
 interface HeaderProps {
     onProfileClick: () => void;

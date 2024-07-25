@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { LoginData } from "../../Types/login";
-import instance from "../../Hooks/useAxios";
+import instance from "../../base-axios/useAxios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 

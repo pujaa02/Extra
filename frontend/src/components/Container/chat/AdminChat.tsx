@@ -3,13 +3,13 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { ChatAttributes, ChatData } from "../../../Types/chat";
 import { io } from 'socket.io-client';
 import "./chat.css";
-import instance from "../../../Hooks/useAxios";
+import instance from "../../../base-axios/useAxios";
 import { REACT_APP_BACKEND_URL } from "../../../config";
 import { RestaurantAverage } from "../../../Types/restaurant";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { handleError } from "../../../utils/util";
-import { addrestid } from "../../Store/Reducers/actions";
+import { addrestid } from "../../redux-toolkit/Reducers/actions";
 import { State } from "../../../Types/reducer";
 
 const socket = io(`${REACT_APP_BACKEND_URL}`);
@@ -89,11 +89,11 @@ const AdminChat: React.FC = () => {
                 method: 'POST',
                 data: newMessage,
             }).then(() => {
-                    // setChat((prevChat) => [...prevChat, newMessage]);
-                    reset();
-                }).catch((error) => {
-                    handleError(error, dispatch, navigate);
-                });
+                // setChat((prevChat) => [...prevChat, newMessage]);
+                reset();
+            }).catch((error) => {
+                handleError(error, dispatch, navigate);
+            });
         }
     }
 

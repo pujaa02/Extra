@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Register from "./components/Register/Register";
-import Login from "./components/Login/Login";
-import ForgetPass from "./components/Forgetpassword/ForgetPassword";
-import Home from "./components/Home/Home";
+import Login from "./modules/Login/Login";
+import ForgetPass from "./modules/Forgetpassword/ForgetPassword";
+import Home from "./modules/Home/Home";
 import Profile from "./components/Container/Profile/Profile"
 import Order from "./components/Container/Order/Order";
 import Cart from "./components/Cart/Cart";
@@ -13,11 +13,12 @@ import { useSelector } from "react-redux";
 import { State_sidebar, State_user } from "./Types/reducer";
 import Restaurant from "./components/Container/Restaurant/Restaurant";
 import Menu from "./components/Container/Menu/Menu";
-import Rest_Home from "./components/Home/restaurant/Rest_Home";
+import Rest_Home from "./modules/Home/restaurant/Rest_Home";
 import { CheckUser, ProtectedRoute } from "./protectedroutes/ProtectedRoute";
 import Chat from "./components/Container/chat/Chat";
 import AdminChat from "./components/Container/chat/AdminChat";
-import Admin_Home from "./components/Home/Admin/Admin_Home";
+import Admin_Home from "./modules/Home/Admin/Admin_Home";
+
 
 const App: React.FC = () => {
   const user = useSelector((state: State_user) => state.user);

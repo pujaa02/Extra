@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Dispatch } from 'redux';
-import { removerestid, removeuser, unvisible } from "../components/Store/Reducers/actions";
 import Cookies from "js-cookie";
 import { NavigateFunction } from 'react-router-dom';
+import { removeuser, unvisible, removerestid } from '../redux-toolkit/Reducers/actions';
 
 export const handleError = (error: any, dispatch: Dispatch, navigate: NavigateFunction) => {
     if (error.message === "Request failed with status code 404") {

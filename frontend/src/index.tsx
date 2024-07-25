@@ -6,7 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Toaster } from 'react-hot-toast';
 import { Provider } from "react-redux";
 import { PersistGate } from 'reduxjs-toolkit-persist/integration/react'
-import { store, persistor } from "./components/Store/store";
+import { store, persistor } from "./components/redux-toolkit/store";
 import "./index.css"
 
 const root = ReactDOM.createRoot(

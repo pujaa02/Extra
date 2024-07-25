@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import instance from "../../../Hooks/useAxios";
+import instance from "../../../base-axios/useAxios";
 import { State_user } from "../../../Types/reducer";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -50,7 +50,7 @@ const Restaurant: React.FC = () => {
                 }
             });
         } catch (error) {
-            handleError(error, dispatch, navigate); 
+            handleError(error, dispatch, navigate);
         }
     };
 
@@ -68,7 +68,7 @@ const Restaurant: React.FC = () => {
                 }
             });
         } catch (error) {
-            handleError(error, dispatch, navigate); 
+            handleError(error, dispatch, navigate);
         }
     };
 

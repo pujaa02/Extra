@@ -3,7 +3,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { ChatAttributes, ChatData } from "../../../Types/chat";
 import { io } from 'socket.io-client';
 import "./chat.css"
-import instance from "../../../Hooks/useAxios";
+import instance from "../../../base-axios/useAxios";
 import { REACT_APP_BACKEND_URL } from "../../../config";
 import { handleError } from "../../../utils/util";
 import { useDispatch, useSelector } from "react-redux";

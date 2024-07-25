@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import Sidebar from "../Sidebar/Sidebar";
+import Sidebar from "../../modules/Sidebar/Sidebar";
 import { useDispatch } from "react-redux";
 import Header from "../Header/Header";
-import { visible } from "../Store/Reducers/actions";
+import { visible } from "../redux-toolkit/Reducers/actions";
 
 interface MainLayoutProps {
     sidebarVisible: boolean;

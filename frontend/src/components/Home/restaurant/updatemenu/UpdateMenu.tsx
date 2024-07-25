@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { MenuAttributes } from "../../../../Types/menu";
 import { Props } from "../../../../Types/props";
 import { State } from "../../../../Types/reducer";
-import instance from "../../../../Hooks/useAxios";
+import instance from "../../../../base-axios/useAxios";
 import toast from "react-hot-toast";
 import { REACT_APP_IMAGEURL } from "../../../../config";
 import { handleError } from "../../../../utils/util";

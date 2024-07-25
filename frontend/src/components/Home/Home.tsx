@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from "react";
-import instance from "../../Hooks/useAxios";
+import instance from "../../base-axios/useAxios";
 import { Menu } from "../../Types/menu";
 import "./home.css";
 import { RestaurantAverage } from "../../Types/restaurant";
 import Header from "../Header/Header";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { add_menu, add_to_cart, remove_menu, visible } from "../Store/Reducers/actions";
+import { add_menu, add_to_cart, remove_menu, visible } from "../redux-toolkit/Reducers/actions";
 import StarIcon from '@mui/icons-material/Star';
 import { REACT_APP_IMAGEURL } from "../../config";
 

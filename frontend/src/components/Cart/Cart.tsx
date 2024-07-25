@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Header from "../Header/Header";
-import { decrement, increment, remove_from_cart, visible } from "../Store/Reducers/actions";
+import { decrement, increment, remove_from_cart, visible } from "../redux-toolkit/Reducers/actions";
 import { State } from "../../Types/reducer";
 import { Menu } from "../../Types/menu";
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -17,7 +17,7 @@ const Cart: React.FC = () => {
     const dispatch = useDispatch();
     const [defaultComponent, setDefaultComponent] = useState("profile");
     const cart = useSelector((state: State) => state.cart);
-    
+
     const handleProfileClick = () => {
         dispatch(visible())
         setDefaultComponent("profile");

@@ -4,8 +4,8 @@ import { State, State_user } from "../../../Types/reducer";
 import { Menu } from "../../../Types/menu";
 import { useNavigate } from "react-router-dom";
 import "./order.css"
-import { emptycart } from "../../Store/Reducers/actions";
-import instance from "../../../Hooks/useAxios";
+import { emptycart } from "../../redux-toolkit/Reducers/actions";
+import instance from "../../../base-axios/useAxios";
 import SendIcon from '@mui/icons-material/Send';
 import { handleError } from "../../../utils/util";
 
