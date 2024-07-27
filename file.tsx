@@ -3,6 +3,7 @@ export const getallrestaurantQuery = async (page: number, search: string) => {
         const recordsperPage: number = 5;
         const start: number = page * recordsperPage - recordsperPage;
         let restaurants;
+
         if (search === "nothing") {
             restaurants = await prisma.restaurant.findMany({
                 take: recordsperPage,
@@ -12,28 +13,35 @@ export const getallrestaurantQuery = async (page: number, search: string) => {
                 },
             });
         } else {
+            const searchConditions = [
+                {
+                    name: {
+                        contains: search,
+                        mode: 'insensitive'
+                    },
+                },
+                {
+                    phone: {
+                        contains: search,
+                        mode: 'insensitive'
+                    },
+                }
+            ];
+
+            // Check if search can be converted to a valid number
+            const searchAsNumber = Number(search);
+            if (!isNaN(searchAsNumber)) {
+                searchConditions.push({
+                    user_id: searchAsNumber
+                });
+            }
+
             restaurants = await prisma.restaurant.findMany({
                 take: recordsperPage,
                 skip: start,
                 where: {
                     deletedAt: null,
-                    OR: [
-                        {
-                            user_id: Number(search)
-                        },
-                        {
-                            name: {
-                                contains: search,
-                                mode: 'insensitive'
-                            },
-                        },
-                        {
-                            phone: {
-                                contains: search,
-                                mode: 'insensitive'
-                            },
-                        },
-                    ],
+                    OR: searchConditions,
                 },
             });
         }
@@ -54,6 +62,6 @@ export const getallrestaurantQuery = async (page: number, search: string) => {
             totalPages
         };
     } catch (err) {
-        return { success: false, message: "Error occured" };
+        return { success: false, message: "Error occurred" };
     }
 }
