@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +17,9 @@ type GetAllRestaurantResponse = {
   totalPages: number;
 };
 
+// Define a type for search conditions
+type SearchCondition = Prisma.RestaurantWhereInput;
+
 export const getallrestaurantQuery = async (page: number, search: string): Promise<GetAllRestaurantResponse> => {
   try {
     const recordsperPage: number = 5;
@@ -32,7 +35,7 @@ export const getallrestaurantQuery = async (page: number, search: string): Promi
         },
       });
     } else {
-      const searchConditions: any[] = [
+      const searchConditions: SearchCondition[] = [
         {
           name: {
             contains: search,
