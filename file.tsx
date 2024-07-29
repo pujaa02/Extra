@@ -1,87 +1,80 @@
-import { features, rolePermissions } from './../../resources/seedData';
-import { DataSource, Repository } from 'typeorm';
-import { PermissionEntity } from 'src/entities/permission.entity';
-import { RoleEntity } from 'src/entities/role.entity';
-import { permissions, roles } from 'src/resources/seedData';
-import { FeatureEntity } from 'src/entities/feature.entity';
-import { RolePermissionFeature } from 'src/entities/rolePermissions.entity';
+import { PrismaClient } from '@prisma/client';
+import { permissions, roles, features, rolePermissions } from './../../resources/seedData';
 
-export async function seedData(dataSource: DataSource): Promise<void> {
-  const permissionRepository: Repository<PermissionEntity> =
-    dataSource.getRepository(PermissionEntity);
-  const roleRepository: Repository<RoleEntity> =
-    dataSource.getRepository(RoleEntity);
-  const featureRepository: Repository<FeatureEntity> =
-    dataSource.getRepository(FeatureEntity);
-  const rolePermissionsRepository: Repository<RolePermissionFeature> =
-    dataSource.getRepository(RolePermissionFeature);
+const prisma = new PrismaClient();
 
+export async function seedData(): Promise<void> {
   for (const permission of permissions) {
-    const isExist: PermissionEntity = await permissionRepository.findOne({
+    const isExist = await prisma.permissionEntity.findUnique({
       where: {
         action: permission,
       },
     });
     if (isExist) continue;
-    await permissionRepository.save({
-      action: permission,
+    await prisma.permissionEntity.create({
+      data: {
+        action: permission,
+      },
     });
   }
 
   for (const role of roles) {
-    const isExist: RoleEntity = await roleRepository.findOne({
+    const isExist = await prisma.roleEntity.findUnique({
       where: {
         role_name: role,
       },
     });
     if (isExist) continue;
-    await roleRepository.save({ role_name: role });
+    await prisma.roleEntity.create({
+      data: { role_name: role },
+    });
   }
 
   for (const feature of features) {
-    const isExist: FeatureEntity = await featureRepository.findOne({
+    const isExist = await prisma.featureEntity.findUnique({
       where: {
         name: feature,
       },
     });
     if (isExist) continue;
-    await featureRepository.save({ name: feature });
+    await prisma.featureEntity.create({
+      data: { name: feature },
+    });
   }
 
   for (const roleKey in rolePermissions) {
-    const role: RoleEntity = await roleRepository.findOne({
+    const role = await prisma.roleEntity.findUnique({
       where: { role_name: roleKey },
     });
     if (!role) continue;
-    for (const featureKey in rolePermissions[
-      roleKey as keyof object
-    ] as object) {
-      const feature: FeatureEntity = await featureRepository.findOne({
+
+    for (const featureKey in rolePermissions[roleKey as keyof typeof rolePermissions]) {
+      const feature = await prisma.featureEntity.findUnique({
         where: { name: featureKey },
       });
       if (!feature) continue;
-      for (const _permission of rolePermissions[roleKey as keyof object][
-        featureKey as keyof object
-      ] as string[]) {
-        const permission: PermissionEntity = await permissionRepository.findOne(
-          {
-            where: { action: _permission },
-          },
-        );
+
+      for (const _permission of rolePermissions[roleKey as keyof typeof rolePermissions][featureKey as keyof typeof rolePermissions[typeof roleKey]]) {
+        const permission = await prisma.permissionEntity.findUnique({
+          where: { action: _permission },
+        });
         if (!permission) continue;
-        const isExist: RolePermissionFeature =
-          await rolePermissionsRepository.findOne({
-            where: {
-              role,
-              feature,
-              permission,
-            },
-          });
+
+        const isExist = await prisma.rolePermissionFeature.findFirst({
+          where: {
+            roleId: role.id,
+            featureId: feature.id,
+            permissionId: permission.id,
+          },
+        });
         if (isExist) continue;
-        await rolePermissionsRepository.save({
-          role,
-          feature,
-          permission,
+
+        await prisma.rolePermissionFeature.create({
+          data: {
+            role: { connect: { id: role.id } },
+            feature: { connect: { id: feature.id } },
+            permission: { connect: { id: permission.id } },
+          },
         });
       }
     }
