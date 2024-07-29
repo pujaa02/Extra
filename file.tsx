@@ -1,21 +1,25 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { RoleEntity } from './role.entity';
-import { PermissionEntity } from './permission.entity';
-import { FeatureEntity } from './feature.entity';
+model RolePermissionFeature {
+  id         Int        @id @default(autoincrement())
+  roleId     Int
+  permissionId Int
+  featureId  Int
 
-@Entity()
-export class RolePermissionFeature {
-  @PrimaryGeneratedColumn()
-  id: number;
+  role       RoleEntity       @relation(fields: [roleId], references: [id])
+  permission PermissionEntity @relation(fields: [permissionId], references: [id])
+  feature    FeatureEntity    @relation(fields: [featureId], references: [id])
+}
 
-  @ManyToOne(() => RoleEntity, (role) => role.id, { cascade: true })
-  role: RoleEntity;
+model RoleEntity {
+  id                   Int                   @id @default(autoincrement())
+  rolePermissionFeature RolePermissionFeature[]
+}
 
-  @ManyToOne(() => PermissionEntity, (permission) => permission.id, {
-    cascade: true,
-  })
-  permission: PermissionEntity;
+model PermissionEntity {
+  id                   Int                   @id @default(autoincrement())
+  rolePermissionFeature RolePermissionFeature[]
+}
 
-  @ManyToOne(() => FeatureEntity, (feature) => feature.id, { cascade: true })
-  feature: FeatureEntity;
+model FeatureEntity {
+  id                   Int                   @id @default(autoincrement())
+  rolePermissionFeature RolePermissionFeature[]
 }
