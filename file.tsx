@@ -1,91 +1,21 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { RoleEntity } from './role.entity';
+import { PermissionEntity } from './permission.entity';
+import { FeatureEntity } from './feature.entity';
 
-const prisma = new PrismaClient();
-
-type Restaurant = {
+@Entity()
+export class RolePermissionFeature {
+  @PrimaryGeneratedColumn()
   id: number;
-  name: string;
-  phone: string;
-  user_id: number;
-  deletedAt: Date | null;
-};
 
-type GetAllRestaurantResponse = {
-  restaurants: Restaurant[];
-  success: boolean;
-  message: string;
-  totalPages: number;
-};
+  @ManyToOne(() => RoleEntity, (role) => role.id, { cascade: true })
+  role: RoleEntity;
 
-// Define a type for search conditions
-type SearchCondition = Prisma.RestaurantWhereInput;
+  @ManyToOne(() => PermissionEntity, (permission) => permission.id, {
+    cascade: true,
+  })
+  permission: PermissionEntity;
 
-export const getallrestaurantQuery = async (page: number, search: string): Promise<GetAllRestaurantResponse> => {
-  try {
-    const recordsperPage: number = 5;
-    const start: number = page * recordsperPage - recordsperPage;
-    let restaurants: Restaurant[];
-
-    if (search === "nothing") {
-      restaurants = await prisma.restaurant.findMany({
-        take: recordsperPage,
-        skip: start,
-        where: {
-          deletedAt: null
-        },
-      });
-    } else {
-      const searchConditions: SearchCondition[] = [
-        {
-          name: {
-            contains: search,
-            mode: 'insensitive'
-          },
-        },
-        {
-          phone: {
-            contains: search,
-            mode: 'insensitive'
-          },
-        }
-      ];
-
-      // Check if search can be converted to a valid number
-      const searchAsNumber: number = Number(search);
-      if (!isNaN(searchAsNumber)) {
-        searchConditions.push({
-          user_id: searchAsNumber
-        });
-      }
-
-      restaurants = await prisma.restaurant.findMany({
-        take: recordsperPage,
-        skip: start,
-        where: {
-          deletedAt: null,
-          OR: searchConditions,
-        },
-      });
-    }
-
-    const totalRestaurants = await prisma.restaurant.findMany({
-      where: {
-        deletedAt: null
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    const totalPages: number = Math.ceil(totalRestaurants.length / recordsperPage);
-
-    return {
-      restaurants,
-      success: true,
-      message: "Successfully get all restaurants",
-      totalPages
-    };
-  } catch (err) {
-    return { success: false, message: "Error occurred" };
-  }
-};
+  @ManyToOne(() => FeatureEntity, (feature) => feature.id, { cascade: true })
+  feature: FeatureEntity;
+}
