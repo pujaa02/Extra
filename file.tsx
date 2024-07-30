@@ -289,6 +289,28 @@ const App: React.FC = () => {
 export default App;
               
 
+import React from 'react';
+import { Route, Redirect } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
+
+const PrivateRoute = ({ component: Component, role, ...rest }) => {
+  const { user } = useAuth();
+
+  return (
+    <Route
+      {...rest}
+      render={(props) =>
+        user.isAuthenticated && user.role === role ? (
+          <Component {...props} />
+        ) : (
+          <Redirect to="/login" />
+        )
+      }
+    />
+  );
+};
+
+export default PrivateRoute;
 
 
 
