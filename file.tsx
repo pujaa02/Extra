@@ -1,32 +1,34 @@
- const roleAndPermission = await this.rolePermissionRepository.getAll({
-      include: [
-        {
-          model: Feature,
-          attributes: [],
-        },
-        {
-          model: Permission,
-          attributes: [],
-        },
-        {
-          model: Role,
-          attributes: [],
-        },
-      ],
-      attributes: [
-        'access',
-        [Sequelize.col('feature.name'), 'feature_name'],
-        [Sequelize.col('role.name'), 'role_name'],
-        [Sequelize.col('feature.id'), 'feature_id'],
-        [Sequelize.col('permission.name'), 'permission_name'],
-        [Sequelize.col('permission.id'), 'permission_id'],
-      ],
-      where: {
-        role_id: user.role_id,
+// Fetch role and permission with associated feature, role, and permission data
+const roleAndPermission = await prisma.rolePermission.findMany({
+  where: {
+    roleId: user.role_id, // Assuming 'roleId' is the correct field name
+  },
+  include: {
+    feature: {
+      select: {
+        name: true,
+        id: true,
       },
-    });
-    const role = await this.roleRepository.getAll({});
+    },
+    permission: {
+      select: {
+        name: true,
+        id: true,
+      },
+    },
+    role: {
+      select: {
+        name: true,
+      },
+    },
+  },
+});
 
-    const permission = await this.permissionRepository.getAll({});
+// Fetch all roles
+const role = await prisma.role.findMany({});
 
-    const trainerRating = await this.trainerRepository.getAllSurveyRating(req, res);
+// Fetch all permissions
+const permission = await prisma.permission.findMany({});
+
+// Fetch trainer ratings (assuming this is a custom method or a relation in the trainer model)
+const trainerRating = await prisma.trainer.getSurveyRating(req, res);
