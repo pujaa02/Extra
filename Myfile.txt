@@ -1,106 +1,277 @@
-npx create-react-app excel-import
-cd excel-import
-npm install xlsx axios
+
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useDispatch, useSelector } from "react-redux";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import instance from "../../base-axios/useAxios";
+import Cookies from "js-cookie";
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import { removeuser, unvisible, emptycart, removerestid, removedriverid } from "../../redux-toolkit/Reducers/actions";
+import { State_user, State } from "../../Types/reducer";
+// import { NotificationData } from "../../Types/notification";
+import { handleError } from "../../utils/util";
+import io from "socket.io-client";
+import { REACT_APP_BACKEND_URL } from "../../config";
+
+const socket = io(`${REACT_APP_BACKEND_URL}`);
+
+export interface NotificationData {
+    id: number;
+    driver_id: number;
+    order_id: number;
+    message: string;
+    isRead: boolean;
+    isDeleted: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    order: { user_id: number, address: string, phone: string }
+}
+interface HeaderProps {
+    onProfileClick: () => void;
+}
+const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate()
+    const data = useSelector((state: State_user) => state.user);
+    const cart = useSelector((state: State) => state.cart);
+    const driver_id = useSelector((state: State) => state.IDs.DriverID);
+    const [notification, setNotification] = useState<NotificationData[]>([])
+
+    useEffect(() => {
+        const fetchnotification = async () => {
+            await instance({
+                url: `/notification/fetchnotification/${driver_id}`,
+                method: "GET",
+            }).then((res) => {
+                const newnotify = (res.data.data.driver_notification).filter((item: NotificationData) => {
+                    return item.isRead === false && item.isDeleted === false
+                })
+                setNotification(newnotify)
+            }).catch((error) => {
+                handleError(error, dispatch, navigate);
+            });
+        }
+
+        fetchnotification();
+
+        socket.on("notification", (notification) => {
+            setNotification((prevNotifications) => [notification, ...prevNotifications]);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [driver_id, navigate, dispatch])
 
 
-import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
-import axios from 'axios';
-
-const App = () => {
-  const [excelData, setExcelData] = useState([]);
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet);
-      setExcelData(json);
+    const handleLogout = async () => {
+        if ((cart.cart).length !== 0) {
+            await instance({
+                url: `cart/addtocart/${data.id}`,
+                method: "POST",
+                data: cart.cart,
+            });
+        }
+        dispatch(removeuser());
+        dispatch(unvisible());
+        dispatch(emptycart());
+        dispatch(removerestid());
+        dispatch(removedriverid())
+        Cookies.remove("token")
+        navigate("/")
     };
+    return (
+        <div className="w-full mx-auto rounded-lg text-primary relative top-0 left-0">
+            <div className="bg-red-600 p-7">
+                <p className="text-white text-xl font-bold flex items-center space-x-2 ml-40 -mt-6">
+                    <Link to="/">
+                        <img
+                            id="miimg"
+                            src={require("./logo.png")}
+                            alt="none"
+                            className="w-16 h-12 rounded-full"
+                        />
+                        Foodies
+                    </Link>
+                </p>
+                <ul className="flex items-center justify-end space-x-8 mt-[-50px] font-bold text-lg text-white mr-32">
+                    {(data.role_id === 3) && <li className="relative" >
+                        <Link to="/notifications">
+                            <NotificationsIcon className="text-white text-3xl" />
+                            <p className="absolute top-[-8px] left-[10px] rounded-full  bg-gray-950 px-2 text-sm">{notification.length}</p>
+                        </Link>
+                    </li>}
+                    {data.id ? (
+                        <li onClick={handleLogout}>
+                            <Link to="">
+                                <LogoutIcon className="text-white text-3xl" /> Logout
+                            </Link>
+                        </li>
+                    ) : (
+                        <li>
+                            <Link to="/login">
+                                <LoginIcon className="text-white text-3xl" /> Login
+                            </Link>
+                        </li>
+                    )}
+                    {((!data.id) || data.role_id === 4) && <li className="relative" >
+                        <Link to="/cart">
+                            <ShoppingCartIcon className="text-white text-3xl" />
+                            <p className="absolute top-[-10px] left-[20px]">{cart.totalItems || 0}</p>
+                        </Link>
+                    </li>}
 
-    reader.readAsArrayBuffer(file);
-  };
-
-  const handleSubmit = () => {
-    axios.post('http://localhost:5000/api/upload', { data: excelData })
-      .then(response => {
-        console.log('Data successfully uploaded:', response);
-      })
-      .catch(error => {
-        console.error('There was an error uploading the data:', error);
-      });
-  };
-
-  return (
-    <div>
-      <input type="file" onChange={handleFileUpload} />
-      <button onClick={handleSubmit}>Upload Data</button>
-    </div>
-  );
+                    {data.id && (
+                        <li className="relative" onClick={onProfileClick}>
+                            <Link to="">
+                                <AccountCircleIcon className="text-white text-3xl" />
+                                <p className="absolute top-0 left-6">{data.fname}</p>
+                            </Link>
+                        </li>
+                    )}
+                </ul>
+            </div>
+        </div>
+    );
 };
 
-export default App;
+export default Header;
 
 
-mkdir server
-cd server
-npm init -y
-npm install express mysql body-parser cors
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { ChangeEvent, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { State, State_user, } from "../../../Types/reducer";
+import { Menu } from "../../../Types/menu";
+import { useNavigate } from "react-router-dom";
+import SendIcon from '@mui/icons-material/Send';
+import Header from "../../../components/Header/Header";
+import { visible } from "../../../redux-toolkit/Reducers/actions";
+import toast from "react-hot-toast";
+import { handleError } from "../../../utils/util";
+import instance from "../../../base-axios/useAxios";
+import "./payment.css"
+import io from "socket.io-client";
+import { REACT_APP_BACKEND_URL } from "../../../config";
 
+const socket = io(`${REACT_APP_BACKEND_URL}`);
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const mysql = require('mysql');
+const Payment: React.FC = () => {
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const [defaultComponent, setDefaultComponent] = useState("profile");
+    const user = useSelector((state: State_user) => state.user);
+    const cart = useSelector((state: State) => state.cart);
+    const [address, setAddress] = useState<string>("");
+    const [phone, setPhone] = useState<string>("");
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+    useEffect(() => {
+        socket.on("notification", (notification) => {
+            toast.success(notification.message); 
+        });
 
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',  // use your MySQL username
-  password: 'password',  // use your MySQL password
-  database: 'excel_data',  // use your database name
-});
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
-db.connect(err => {
-  if (err) {
-    console.error('Error connecting to the database:', err);
-    return;
-  }
-  console.log('Connected to the MySQL database.');
-});
-
-app.post('/api/upload', (req, res) => {
-  const data = req.body.data;
-
-  const values = data.map(item => [item.name, item.age, item.address]); // Adjust according to your columns
-
-  const sql = 'INSERT INTO users (name, age, address) VALUES ?';
-  db.query(sql, [values], (err, result) => {
-    if (err) {
-      console.error('Error inserting data:', err);
-      res.status(500).send('Error inserting data');
-      return;
+    const changeaddress = (event: ChangeEvent<HTMLInputElement>) => {
+        setAddress(event.target.value);
     }
-    res.send('Data successfully inserted');
-  });
-});
 
-app.listen(5000, () => {
-  console.log('Server is running on port 5000');
-});
+    const changenumber = (event: ChangeEvent<HTMLInputElement>) => {
+        setPhone(event.target.value);
+    }
 
+    const payment = async () => {
+        if (address && phone) {
+            await instance({
+                url: `order/addorder/${user.id}`,
+                method: "POST",
+                data: { cart, address, phone }
+            }).then((res) => {
+                if (res.data.message === "Successfully Order placed") {
+                    navigate("/dashboard/order");
+                    socket.emit("paymentSuccess", {
+                        userId: user.id,
+                        message: "Your order has been placed successfully!",
+                    });
+                }
+            }).catch((error) => {
+                handleError(error, dispatch, navigate);
+            })
+        } else {
+            toast.error("Please fill the data First!!")
+        }
+    }
+    const handleProfileClick = () => {
+        dispatch(visible())
+        setDefaultComponent("profile");
+        navigate("/dashboard/profile");
+    };
+    if (cart.cart.length === 0) {
+        return (
+            <div className="order-container">
+                <div className="p-5 ">
+                    <p className="text-center text-4xl font-bold ... italic text-slate-600">No Order Here at Now</p>
+                </div>
+                <div className="mt-10 ml-16 p-5">
+                    <p className="text-xl"><SendIcon className="mr-2" />Please Select Item first!!</p>
+                    <p className=" mt-5 ml-16 bg-slate-500 p-3 w-36 text-center text-xl text-slate-100 font-bold" onClick={() => navigate("/")}>Add Item</p>
+                </div>
+            </div>
+        )
+    }
+    return (
+        <div>
+            <Header onProfileClick={handleProfileClick} />
+            <div className="order-container">
+                <div className="p-5">
+                    <p className="text-center text-4xl font-bold ... italic text-slate-600">Order Now</p>
+                </div>
+                <div className="wishlist_container">
+                    <div className="h-[calc(50vh-2rem)] overflow-y-scroll">
+                        {cart.cart.map((data: Menu, index: number) => (
+                            <div className="cart_wishlist" key={index}>
+                                <div className="flex justify-center items-center gap-x-9 mt-4">
+                                    <img className="h-32 w-40 rounded-xl" src={`http://192.168.10.119:8000/` + data.image} alt="none" />
+                                    <div className="">
+                                        <p className="text-slate-600 font-bold text-xl">{data.item_name}</p>
+                                        <div className="">
+                                            <p className=""><b>Price : </b>${data.price}</p>
+                                            <p className=""><b>Total Items : </b>{data.count}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <hr className="mt-5  ml-28 w-4/5 h-1.5 bg-black" />
+                    <div className="mt-3 float-right mr-28">
+                        <p className="text-xl"><b>Price : </b> ${cart.total}</p>
+                        <p className="text-xl"><b>Delivery : </b> ${(cart.totalItems) * 15}</p>
+                        <p className="text-xl"><b>Total : </b> ${(cart.total) + ((cart.totalItems) * 15)}</p>
+                    </div>
+                    <div className="mt-28 ml-32">
+                        <label htmlFor="large-input" className="block mt-2 text-sm font-medium text-red-500">Add Address</label>
+                        <input type="text" id="large-input" className="mt-2 block w-4/4 p-4 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-base focus:ring-blue-500 focus:border-blue-5000 dark:focus:ring-blue-500 dark:focus:border-blue-500" onChange={changeaddress} />
+                        <label htmlFor="large-input" className="block mt-2 text-sm font-medium text-red-500">Mobile Number</label>
+                        <input type="text" id="large-input" className="mt-2 block w-4/4 p-4 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-base focus:ring-blue-500 focus:border-blue-5000 dark:focus:ring-blue-500 dark:focus:border-blue-500" onChange={changenumber} />
+                    </div>
+                    <div className="back_home">
+                        <p onClick={() => navigate("/cart")}>Back to Cart</p>
+                    </div>
+                    <div className="payment_btn">
+                        <p onClick={() => payment()}>Go to Payment</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
-cd excel-import
-npm start
-
-cd server
-node index.js
-
+export default Payment;
