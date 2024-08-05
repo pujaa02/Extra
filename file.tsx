@@ -1,422 +1,682 @@
-import express, { Application } from "express";
-const app: Application = express();
-import cors from 'cors';
-import { generateDocs } from './utils/GenerateDocs';
-import cookieParser from 'cookie-parser';
-import { PrismaClient } from '@prisma/client';
-import path from 'path';
-import http from 'http';
-import { Server } from "socket.io";
-import { PORT, BASE_URL } from "./config";
-import { router } from "./common/routes";
+import React, { useState } from 'react';
+import CalendarHeader from './CalendarHeader';
+import Calendar from './Calendar';
 
+function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState('month'); // Options: 'month', 'week', 'day'
 
-const port = PORT || 8000;
-export const prisma = new PrismaClient()
-const server = http.createServer(app);
-
-const io = new Server(server, {
-    cors: {
-        origin: BASE_URL,
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
-});
-const corsOptions = {
-    origin: BASE_URL,
-    methods: 'GET, PUT, POST, DELETE',
-    credentials: true,
-    allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization,token_data',
-};
-app.use(cors(corsOptions))
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')))
-app.use(cookieParser());
-app.use(express.json());
-app.use(router);
-
-io.on("connection", (socket) => {
-
-    socket.on('message', (msg) => {
-        io.emit('message', msg);
-    });
-
-    socket.on("joinRoom", (room) => {
-        console.log("🚀 ~ socket.on ~ room:", room)
-        socket.join(room);
-    });
-
-    socket.on("leaveRoom", (room) => {
-        socket.leave(room);
-    });
-
-    socket.on('paymentMade', (data) => {
-        console.log("🚀 ~ socket.on ~ data:", data);
-        io.sockets.in('drivers').emit('newNotification', data);
-        // io.to('drivers').emit('newNotification', data);
-    });
-
-    socket.on("disconnect", () => {
-    })
-
-});
-server.listen(port, () => {
-    console.log(`Server is running in port: ${port} `);
-});
-
-
-generateDocs(app);
-
-import React from "react";
-import { LoginData } from "../../Types/login";
-import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
-import instance from "../../base-axios/useAxios";
-import { useDispatch } from "react-redux";
-import { format } from "date-fns/format";
-import { Menu } from "../../Types/menu";
-import { RestaurantAttributes } from "../../Types/restaurant";
-import { adduser, new_cart, addrest } from "../../redux-toolkit/Reducers/actions";
-import socket from "../../utils/socket";
-const Login: React.FC = () => {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-    } = useForm<LoginData>();
-
-    const handlelogin = async (data: LoginData) => {
-        await instance({
-            url: "login/",
-            method: "POST",
-            data: data,
-        }).then(async (res) => {
-            if (res.data.msg === "Success") {
-                const userdata = { ...res.data.user, bd: format(new Date(res.data.user.bd), 'yyyy-MM-dd') }
-                if (userdata.role_id === 3) {
-                    socket.emit("joinRoom", "drivers");
-                }
-                dispatch(adduser(userdata))
-                if (userdata.role_id === 4) {
-                    await instance({
-                        url: `cart/getcarddata/${userdata.id}`,
-                        method: "GET",
-                    }).then((res) => {
-                        if (res.data.message === "success") {
-                            (res.data.result).forEach((element: Menu) => {
-                                dispatch(new_cart(element))
-                            });
-                        }
-                    });
-                }
-                if (userdata.role_id === 2) {
-                    await instance({
-                        url: `restaurant/getrestaurantdata/${userdata.id}`,
-                        method: "GET",
-                    })
-                        .then((res) => {
-                            const result: RestaurantAttributes = res.data.result[0];
-                            dispatch(addrest(result))
-
-                        })
-                        .catch((e) => {
-                            console.log(e);
-                        });
-                }
-                toast.success("Successfully Login");
-                navigate("/");
-            } else {
-                toast.error("Please Enter Valid Data");
-            }
-        });
-    };
-
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="container mx-auto p-6 max-w-md bg-white border-4 border-blue-600 rounded-lg">
-                <form className="space-y-4" onSubmit={handleSubmit(handlelogin)}>
-                    <h2 className="text-2xl font-bold text-center text-red-600">Login</h2>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block mb-2 font-bold">
-                            Email:
-                        </label>
-                        <input
-                            type="text"
-                            id="email"
-                            {...register("email", {
-                                required: "Email is Required!!",
-                            })}
-                            className="w-full p-2 border border-gray-300 rounded-md"
-                        />
-                        {errors.email && (
-                            <p className="mt-1 text-red-600">{errors.email.message}</p>
-                        )}
-                    </div>
-                    <div className="mb-4">
-                        <label htmlFor="password" className="block mb-2 font-bold">
-                            Password:
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            {...register("password", {
-                                required: "Password is Required!!",
-                            })}
-                            className="w-full p-2 border border-gray-300 rounded-md"
-                        />
-                        {errors.password && (
-                            <p className="mt-1 text-red-600">{errors.password.message}</p>
-                        )}
-                    </div>
-                    <div className="flex items-center justify-center mt-4 space-x-4">
-                        <p
-                            id="frgtpass"
-                            onClick={() => navigate("/forgetpassword")}
-                            className="w-40 p-2 text-center text-white bg-blue-500 rounded-md cursor-pointer hover:bg-blue-600"
-                        >
-                            Forget Password
-                        </p>
-                        <button
-                            type="submit"
-                            id="loginbtn"
-                            className="w-20 p-2 text-center text-white bg-blue-500 rounded-md cursor-pointer hover:bg-blue-600"
-                        >
-                            Login
-                        </button>
-                    </div>
-                    <div className="mt-4 text-center">
-                        <p>
-                            Don&apos;t  have an account?{" "}
-                            <Link to="/register" className="text-blue-500 underline">
-                                Register
-                            </Link>
-                        </p>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-export default Login;
-
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import LoginIcon from "@mui/icons-material/Login";
-import LogoutIcon from "@mui/icons-material/Logout";
-import { useDispatch, useSelector } from "react-redux";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import instance from "../../base-axios/useAxios";
-import Cookies from "js-cookie";
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import { removeuser, unvisible, emptycart, removerestid, removedriverid } from "../../redux-toolkit/Reducers/actions";
-import { State_user, State } from "../../Types/reducer";
-import { NotificationData } from "../../Types/notification";
-import { handleError } from "../../utils/util";
-import socket from "../../utils/socket";
-
-interface HeaderProps {
-    onProfileClick: () => void;
+  return (
+    <div>
+      <CalendarHeader currentDate={currentDate} setCurrentDate={setCurrentDate} setView={setView} />
+      <Calendar currentDate={currentDate} view={view} />
+    </div>
+  );
 }
-const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
-    const dispatch = useDispatch();
-    const navigate = useNavigate()
-    const data = useSelector((state: State_user) => state.user);
-    const cart = useSelector((state: State) => state.cart);
-    const driver_id = useSelector((state: State) => state.IDs.DriverID);
-    const [notification, setNotification] = useState<NotificationData[]>([])
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const res = await instance.get(`/notification/fetchnotification/${driver_id}`);
-                const newNotifications = res.data.data.driver_notification.filter(
-                    (item: NotificationData) => !item.isRead && !item.isDeleted
-                );
-                setNotification(newNotifications);
-            } catch (error) {
-                handleError(error, dispatch, navigate);
-            }
-        };
 
-        fetchNotifications();
-    }, [driver_id, dispatch, navigate]);
+export default App;
+
+import React from 'react';
+
+function CalendarHeader({ currentDate, setCurrentDate, setView }) {
+  const changeMonth = (event) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(event.target.value);
+    setCurrentDate(newDate);
+  };
+
+  const changeYear = (event) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(event.target.value);
+    setCurrentDate(newDate);
+  };
+
+  const changeView = (event) => {
+    setView(event.target.value);
+  };
+
+  return (
+    <div>
+      <select onChange={changeView}>
+        <option value="month">Month</option>
+        <option value="week">Week</option>
+        <option value="day">Day</option>
+      </select>
+      <select onChange={changeMonth}>
+        {Array.from({ length: 12 }, (_, i) => (
+          <option key={i} value={i}>
+            {new Date(0, i).toLocaleString('default', { month: 'long' })}
+          </option>
+        ))}
+      </select>
+      <input type="number" value={currentDate.getFullYear()} onChange={changeYear} />
+    </div>
+  );
+}
+
+export default CalendarHeader;
+
+import React from 'react';
+import MonthView from './MonthView';
+import WeekView from './WeekView';
+import DayView from './DayView';
+
+function Calendar({ currentDate, view }) {
+  switch (view) {
+    case 'month':
+      return <MonthView currentDate={currentDate} />;
+    case 'week':
+      return <WeekView currentDate={currentDate} />;
+    case 'day':
+      return <DayView currentDate={currentDate} />;
+    default:
+      return null;
+  }
+}
+
+export default Calendar;
+
+import React from 'react';
+
+function MonthView({ currentDate }) {
+  // Calculate the days of the month and render them
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const startDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+
+  return (
+    <div>
+      <h3>{currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        {Array.from({ length: startDay }).map((_, index) => (
+          <div key={index}></div>
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, index) => (
+          <div key={index}>{index + 1}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default MonthView;
+
+import React from 'react';
+
+function WeekView({ currentDate }) {
+  // Calculate the week based on the currentDate
+  return (
+    <div>
+      <h3>Week View</h3>
+      {/* Render week days */}
+    </div>
+  );
+}
+
+export default WeekView;
 
 
-    useEffect(() => {
-        socket.on('newNotification', (data) => {
-            setNotification((prev) => [...prev, data]);
-        });
+import React from 'react';
 
-        return () => {
-            socket.off('newNotification');
-        };
-    }, []);
+function DayView({ currentDate }) {
+  return (
+    <div>
+      <h3>{currentDate.toDateString()}</h3>
+      {/* Render day details */}
+    </div>
+  );
+}
 
-    const handleLogout = async () => {
-        socket.emit("leaveRoom", "drivers");
-        if ((cart.cart).length !== 0) {
-            await instance({
-                url: `cart/addtocart/${data.id}`,
-                method: "POST",
-                data: cart.cart,
-            });
-        }
-        dispatch(removeuser());
-        dispatch(unvisible());
-        dispatch(emptycart());
-        dispatch(removerestid());
-        dispatch(removedriverid())
-        Cookies.remove("token")
-        navigate("/")
-    };
-    return (
-        <div className="w-full mx-auto rounded-lg text-primary relative top-0 left-0">
-            <div className="bg-red-600 p-7">
-                <p className="text-white text-xl font-bold flex items-center space-x-2 ml-40 -mt-6">
-                    <Link to="/">
-                        <img
-                            id="miimg"
-                            src={require("./logo.png")}
-                            alt="none"
-                            className="w-16 h-12 rounded-full"
-                        />
-                        Foodies
-                    </Link>
-                </p>
-                <ul className="flex items-center justify-end space-x-8 mt-[-50px] font-bold text-lg text-white mr-32">
-                    {(data.role_id === 3) && <li className="relative" >
-                        <Link to="/notifications">
-                            <NotificationsIcon className="text-white text-3xl" />
-                            <p className="absolute top-[-8px] left-[10px] rounded-full  bg-gray-950 px-2 text-sm">{notification.length}</p>
-                        </Link>
-                    </li>}
-                    {data.id ? (
-                        <li onClick={handleLogout}>
-                            <Link to="">
-                                <LogoutIcon className="text-white text-3xl" /> Logout
-                            </Link>
-                        </li>
-                    ) : (
-                        <li>
-                            <Link to="/login">
-                                <LoginIcon className="text-white text-3xl" /> Login
-                            </Link>
-                        </li>
-                    )}
-                    {((!data.id) || data.role_id === 4) && <li className="relative" >
-                        <Link to="/cart">
-                            <ShoppingCartIcon className="text-white text-3xl" />
-                            <p className="absolute top-[-10px] left-[20px]">{cart.totalItems || 0}</p>
-                        </Link>
-                    </li>}
+export default DayView;
 
-                    {data.id && (
-                        <li className="relative" onClick={onProfileClick}>
-                            <Link to="">
-                                <AccountCircleIcon className="text-white text-3xl" />
-                                <p className="absolute top-0 left-6">{data.fname}</p>
-                            </Link>
-                        </li>
-                    )}
-                </ul>
-            </div>
-        </div>
-    );
+import React, { createContext, useState } from 'react';
+
+const EventContext = createContext();
+
+const EventProvider = ({ children }) => {
+  const [events, setEvents] = useState([]);
+
+  const addEvent = (event) => setEvents([...events, event]);
+  const removeEvent = (id) => setEvents(events.filter(event => event.id !== id));
+
+  return (
+    <EventContext.Provider value={{ events, addEvent, removeEvent }}>
+      {children}
+    </EventContext.Provider>
+  );
 };
 
-export default Header;
-
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { State_user } from "../../../Types/reducer";
-import { useNavigate } from "react-router-dom";
-import SendIcon from '@mui/icons-material/Send';
-import instance from "../../../base-axios/useAxios";
-import { handleError } from "../../../utils/util";
-import { order } from "../../../Types/order";
-import socket from "../../../utils/socket";
-
-const Order: React.FC = () => {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const user = useSelector((state: State_user) => state.user);
-    const [orderData, setOrderData] = useState<order[]>([])
-    const getuserorderdetail = async () => {
-        await instance({
-            url: `order/getorderdetail/${user.id}`,
-            method: "GET",
-        }).then((res) => {
-            if (res.data.message === "Successfully get order Data") {
-                socket.emit('paymentMade', res.data.data.finalresult);
-                setOrderData(res.data.data.finalresult);
-            }
-        }).catch((error) => {
-            handleError(error, dispatch, navigate);
-        })
-    }
-    useEffect(() => {
-        getuserorderdetail();
-    }, [])
+export { EventContext, EventProvider };
 
 
-    if (orderData.length === 0) {
-        return (
-            <div className="position">
-                <div className="p-5 ">
-                    <p className="text-center text-4xl font-bold ... italic text-slate-600">No Order Here at Now</p>
+//year wise another code
+
+import React from 'react';
+import MonthGrid from './MonthGrid';
+
+function YearView({ currentDate }) {
+  const year = currentDate.getFullYear();
+
+  return (
+    <div>
+      <h2>{year}</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+        {Array.from({ length: 12 }, (_, i) => (
+          <MonthGrid key={i} month={i} year={year} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default YearView;
+
+import React from 'react';
+
+function MonthGrid({ month, year }) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
+
+  return (
+    <div>
+      <h4>{monthName}</h4>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+        {/* Render empty slots for the first row */}
+        {Array.from({ length: firstDay }).map((_, i) => (
+          <div key={i} style={{ border: '1px solid #ccc', height: '20px' }}></div>
+        ))}
+        {/* Render days of the month */}
+        {Array.from({ length: daysInMonth }).map((_, i) => (
+          <div key={i} style={{ border: '1px solid #ccc', height: '20px' }}>
+            {i + 1}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default MonthGrid;
+
+
+import React, { useState } from 'react';
+import YearView from './YearView';
+
+function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  return (
+    <div>
+      <YearView currentDate={currentDate} />
+    </div>
+  );
+}
+
+export default App;
+
+
+//day wise 
+import React from 'react';
+import './DayView.css';
+
+const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+
+function DayView({ date, events }) {
+  const dayEvents = events.filter(event => {
+    const eventDate = new Date(event.start);
+    return eventDate.toDateString() === date.toDateString();
+  });
+
+  return (
+    <div className="day-view">
+      <div className="header">
+        <h2>{date.toDateString()}</h2>
+        {/* Add navigation buttons for previous and next day */}
+      </div>
+      <div className="grid">
+        {hours.map((hour, index) => (
+          <div key={index} className="time-slot">
+            <div className="hour-label">{hour}</div>
+            <div className="events">
+              {dayEvents
+                .filter(event => new Date(event.start).getHours() === index)
+                .map((event, idx) => (
+                  <div key={idx} className="event">
+                    {event.title}
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default DayView;
+
+
+.day-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.grid {
+  display: grid;
+  grid-template-rows: repeat(24, auto);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.time-slot {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  position: relative;
+}
+
+.hour-label {
+  width: 60px;
+  text-align: right;
+  padding-right: 10px;
+  border-right: 1px solid #ddd;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.events {
+  margin-left: 70px;
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.event {
+  background: #e0e4ff;
+  border: 1px solid #b0b5ff;
+  padding: 5px;
+  margin-bottom: 5px;
+  border-radius: 3px;
+}
+
+import React, { useState } from 'react';
+import DayView from './DayView';
+
+const sampleEvents = [
+  {
+    id: 1,
+    title: 'Meeting with team',
+    start: new Date(2024, 7, 5, 9, 0),
+    end: new Date(2024, 7, 5, 10, 0),
+  },
+  {
+    id: 2,
+    title: 'Lunch with Sarah',
+    start: new Date(2024, 7, 5, 12, 0),
+    end: new Date(2024, 7, 5, 13, 0),
+  },
+  // Add more events here
+];
+
+function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const previousDay = () => {
+    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 1)));
+  };
+
+  const nextDay = () => {
+    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 1)));
+  };
+
+  return (
+    <div>
+      <DayView date={currentDate} events={sampleEvents} />
+      <div className="navigation">
+        <button onClick={previousDay}>Previous Day</button>
+        <button onClick={nextDay}>Next Day</button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+//week wise 
+
+import React from 'react';
+import DayColumn from './DayColumn';
+import './WeekView.css';
+
+const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+
+function WeekView({ currentDate, events }) {
+  // Calculate the start of the week (assuming the week starts on Sunday)
+  const startOfWeek = new Date(currentDate);
+  startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+
+  const daysOfWeek = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + i);
+    return date;
+  });
+
+  return (
+    <div className="week-view">
+      <div className="week-header">
+        {daysOfWeek.map((date, index) => (
+          <div key={index} className="day-header">
+            {date.toDateString()}
+          </div>
+        ))}
+      </div>
+      <div className="week-grid">
+        {daysOfWeek.map((date, index) => (
+          <DayColumn key={index} date={date} events={events} hours={hours} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default WeekView;
+
+
+import React from 'react';
+import './DayColumn.css';
+
+function DayColumn({ date, events, hours }) {
+  const dayEvents = events.filter(event => {
+    const eventDate = new Date(event.start);
+    return eventDate.toDateString() === date.toDateString();
+  });
+
+  return (
+    <div className="day-column">
+      {hours.map((hour, index) => (
+        <div key={index} className="time-slot">
+          <div className="hour-label">{hour}</div>
+          <div className="events">
+            {dayEvents
+              .filter(event => new Date(event.start).getHours() === index)
+              .map((event, idx) => (
+                <div key={idx} className="event">
+                  {event.title}
                 </div>
-                <div className="mt-10 ml-16 p-5">
-                    <p className="text-xl"><SendIcon className="mr-2" />Please Order Some Item first!!</p>
-                    <p className=" mt-5 ml-16 bg-slate-500 p-3 w-56 text-center text-xl text-slate-100 font-bold" onClick={() => navigate("/")}>Go for Order</p>
-                </div>
-            </div>
-        )
-    }
-    return (
-        <div className="position">
-            <div className="p-5">
-                <p className="text-center text-4xl font-bold ... italic text-slate-600">Your All Orders</p>
-            </div>
-            <div className="container  h-[700px] overflow-y-scroll ">
-                <table className="table-auto mt-10 max-w-[1000px] w-[900px] border-collapse border border-slate-500 rounded">
-                    <thead>
-                        <tr className="bg-lightgray">
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                OrderId
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Items
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Total Amount
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Date
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Status
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {orderData && orderData.map((data: order, index) => (
-                            <tr key={data.order_id} className="p-4">
-                                <td className="py-6 px-6 border border-slate-700 text-center">{index + 1}</td>
-                                <td className="py-6 px-6 border border-slate-700 text-center">{data.item_name}</td>
-                                <td className="py-6 px-6 border border-slate-700 text-center">{data.total_amount}</td>
-                                <td className="py-4 px-6 border border-slate-700 text-center">{`${new Date(data.date).toLocaleDateString()}`}</td>
-                                {data.delivery_status === "Success" ? <td className="py-4 px-6 border border-slate-700 text-center text-lime-700">{data.delivery_status}</td> : <td className="py-4 px-6 border border-slate-700 text-center  text-red-700 ">Pending</td>}
-                            </tr>
-                        ))}
-
-                    </tbody>
-                </table>
-            </div>
+              ))}
+          </div>
         </div>
-    );
-};
+      ))}
+    </div>
+  );
+}
 
-export default Order;
+export default DayColumn;
+
+
+.week-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.week-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #ddd;
+}
+
+.day-header {
+  text-align: center;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+  background: #f5f5f5;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.time-slot {
+  border-bottom: 1px solid #eee;
+  position: relative;
+  height: 60px; /* Adjust based on desired height */
+}
+
+.hour-label {
+  width: 60px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  text-align: right;
+  padding-right: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.events {
+  margin-left: 70px;
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.event {
+  background: #e0e4ff;
+  border: 1px solid #b0b5ff;
+  padding: 5px;
+  margin-bottom: 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+
+import React, { useState } from 'react';
+import WeekView from './WeekView';
+
+const sampleEvents = [
+  {
+    id: 1,
+    title: 'Team Meeting',
+    start: new Date(2024, 7, 5, 9, 0),
+    end: new Date(2024, 7, 5, 10, 0),
+  },
+  {
+    id: 2,
+    title: 'Lunch with Sarah',
+    start: new Date(2024, 7, 6, 12, 0),
+    end: new Date(2024, 7, 6, 13, 0),
+  },
+  // Add more events here
+];
+
+function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const previousWeek = () => {
+    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)));
+  };
+
+  const nextWeek = () => {
+    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)));
+  };
+
+  return (
+    <div>
+      <WeekView currentDate={currentDate} events={sampleEvents} />
+      <div className="navigation">
+        <button onClick={previousWeek}>Previous Week</button>
+        <button onClick={nextWeek}>Next Week</button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+//year wise 
+
+import React from 'react';
+import MonthOverview from './MonthOverview';
+import './YearView.css';
+
+function YearView({ currentYear, events }) {
+  return (
+    <div className="year-view">
+      <h1>{currentYear}</h1>
+      <div className="months-grid">
+        {Array.from({ length: 12 }, (_, month) => (
+          <MonthOverview key={month} year={currentYear} month={month} events={events} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default YearView;
+
+import React from 'react';
+import './MonthOverview.css';
+
+function MonthOverview({ year, month, events }) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
+
+  // Filter events for the current month
+  const monthEvents = events.filter(event => {
+    const eventDate = new Date(event.start);
+    return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+  });
+
+  return (
+    <div className="month-overview">
+      <h3>{monthName}</h3>
+      <div className="month-grid">
+        {Array.from({ length: firstDay }).map((_, index) => (
+          <div key={index} className="empty-slot"></div>
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, dayIndex) => {
+          const day = dayIndex + 1;
+          const eventsForDay = monthEvents.filter(event => new Date(event.start).getDate() === day);
+
+          return (
+            <div key={dayIndex} className="day-cell">
+              <div className="day-number">{day}</div>
+              <div className="day-events">
+                {eventsForDay.map(event => (
+                  <div key={event.id} className="event-indicator">{event.title}</div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default MonthOverview;
+//1st css
+.year-view {
+  padding: 20px;
+}
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+//2nd css
+.month-overview {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.month-overview h3 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.empty-slot,
+.day-cell {
+  border: 1px solid #ddd;
+  min-height: 60px;
+  position: relative;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.day-number {
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.day-events {
+  margin-top: 5px;
+}
+
+.event-indicator {
+  font-size: 0.75em;
+  background-color: #e0e4ff;
+  border: 1px solid #b0b5ff;
+  border-radius: 3px;
+  padding: 2px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+   import React, { useState } from 'react';
+import YearView from './YearView';
+
+const sampleEvents = [
+  { id: 1, title: 'New Year Party', start: new Date(2024, 0, 1) },
+  { id: 2, title: 'Project Deadline', start: new Date(2024, 3, 15) },
+  // More sample events...
+];
+
+function App() {
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  const previousYear = () => setCurrentYear(currentYear - 1);
+  const nextYear = () => setCurrentYear(currentYear + 1);
+
+  return (
+    <div>
+      <YearView currentYear={currentYear} events={sampleEvents} />
+      <div className="navigation">
+        <button onClick={previousYear}>Previous Year</button>
+        <button onClick={nextYear}>Next Year</button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
