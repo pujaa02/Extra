@@ -35,29 +35,27 @@ app.use(express.json());
 app.use(router);
 
 io.on("connection", (socket) => {
-    // console.log(`User connected ${socket.id}`);
 
     socket.on('message', (msg) => {
         io.emit('message', msg);
     });
 
     socket.on("joinRoom", (room) => {
+        console.log("🚀 ~ socket.on ~ room:", room)
         socket.join(room);
-        console.log(`User ${socket.id} joined room: ${room}`);
     });
 
     socket.on("leaveRoom", (room) => {
         socket.leave(room);
-        console.log(`User ${socket.id} left room: ${room}`);
     });
 
     socket.on('paymentMade', (data) => {
-        console.log('Payment made:', data);
-        io.to('drivers').emit('newNotification', { message: 'New payment received!', details: data });
+        console.log("🚀 ~ socket.on ~ data:", data);
+        io.sockets.in('drivers').emit('newNotification', data);
+        // io.to('drivers').emit('newNotification', data);
     });
 
     socket.on("disconnect", () => {
-        // console.log('user disconnected');
     })
 
 });
@@ -68,248 +66,141 @@ server.listen(port, () => {
 
 generateDocs(app);
 
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, Outlet } from "react-router-dom";
-import Header from "../../../components/Header/Header";
-import { adddriverid, visible } from "../../../redux-toolkit/Reducers/actions";
-import instance from "../../../base-axios/useAxios";
-import { handleError } from "../../../utils/util";
-import { State, State_user } from "../../../Types/reducer";
-import { DashboardData } from "../../../Types/driver";
-import socket from "../../../utils/socket";
-
-const Home: React.FC = () => {
+import React from "react";
+import { LoginData } from "../../Types/login";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import instance from "../../base-axios/useAxios";
+import { useDispatch } from "react-redux";
+import { format } from "date-fns/format";
+import { Menu } from "../../Types/menu";
+import { RestaurantAttributes } from "../../Types/restaurant";
+import { adduser, new_cart, addrest } from "../../redux-toolkit/Reducers/actions";
+import socket from "../../utils/socket";
+const Login: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const user = useSelector((state: State_user) => state.user);
-    const driver_id = useSelector((state: State) => state.IDs.DriverID);
-    const [dashboarddata, setDashboardData] = useState<DashboardData[]>([]);
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<LoginData>();
 
-    useEffect(() => {
-        if (user.role_id === 3) {
-            socket.emit("joinRoom", "drivers");
-        }
-        return () => {
-            socket.emit("leaveRoom", "drivers");
-        };
-    }, [user.role_id]);
-
-    useEffect(() => {
-        fetchdashboardData();
-        setdriver();
-    })
-
-    const setdriver = async () => {
+    const handlelogin = async (data: LoginData) => {
         await instance({
-            url: `/driver/fetchdriver/${user.id}`,
-            method: "GET",
-        }).then((res) => {
-            dispatch(adddriverid(res.data.data.result.id))
-        }).catch((error) => {
-            handleError(error, dispatch, navigate);
-        });
-    }
+            url: "login/",
+            method: "POST",
+            data: data,
+        }).then(async (res) => {
+            if (res.data.msg === "Success") {
+                const userdata = { ...res.data.user, bd: format(new Date(res.data.user.bd), 'yyyy-MM-dd') }
+                if (userdata.role_id === 3) {
+                    socket.emit("joinRoom", "drivers");
+                }
+                dispatch(adduser(userdata))
+                if (userdata.role_id === 4) {
+                    await instance({
+                        url: `cart/getcarddata/${userdata.id}`,
+                        method: "GET",
+                    }).then((res) => {
+                        if (res.data.message === "success") {
+                            (res.data.result).forEach((element: Menu) => {
+                                dispatch(new_cart(element))
+                            });
+                        }
+                    });
+                }
+                if (userdata.role_id === 2) {
+                    await instance({
+                        url: `restaurant/getrestaurantdata/${userdata.id}`,
+                        method: "GET",
+                    })
+                        .then((res) => {
+                            const result: RestaurantAttributes = res.data.result[0];
+                            dispatch(addrest(result))
 
-    const fetchdashboardData = async () => {
-        await instance({
-            url: `/driver/fetchdashboarddata/${driver_id}`,
-            method: "GET",
-        }).then((res) => {
-            setDashboardData(res.data.data.result)
-        }).catch((error) => {
-            handleError(error, dispatch, navigate);
-        });
-    }
-
-    const deliveredorder = async (order_id: number) => {
-        await instance({
-            url: `/order/updateorderstatus/${order_id}`,
-            method: "GET",
-        }).then((res) => {
-            if (res.data.message === "Successfully updated status") {
-                fetchdashboardData()
+                        })
+                        .catch((e) => {
+                            console.log(e);
+                        });
+                }
+                toast.success("Successfully Login");
+                navigate("/");
+            } else {
+                toast.error("Please Enter Valid Data");
             }
-        }).catch((error) => {
-            handleError(error, dispatch, navigate);
         });
-    }
-
-
-    const [defaultComponent, setDefaultComponent] = useState("profile");
-    const handleProfileClick = () => {
-        dispatch(visible())
-        setDefaultComponent("profile");
-        navigate("/dashboard/profile");
     };
 
-    if (dashboarddata.length === 0) {
-        return (
-            <div className="">
-                <Header onProfileClick={handleProfileClick} />
-                <div className="min-h-screen">
-                    <div className="flex flex-row pt-24 px-10 pb-4 justify-center">
-                        <div className="w-9/12">
-                            <div className="flex flex-row h-[calc(80vh-2rem)]">
-                                <div className="bg-no-repeat bg-slate-100 border border-slate-100 rounded-xl w-full mr-2 p-6" >
-                                    <p className="text-center text-4xl font-bold ... italic text-slate-600 ">Welcome to Dashboard</p>
-                                    <div className="mt-24 flex justify-center">
-                                        <img className="w-1/4 h-1/4 rounded-full" src={require(`./dashboard.png`)} alt="no image found" />
-                                    </div>
-                                    <p className="text-center text-xl text-red-600">No any Data Found</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div >
-        )
-    }
     return (
-        <div className="">
-            <Header onProfileClick={handleProfileClick} />
-            <div className="min-h-screen">
-                <div className="flex flex-row pt-24 px-10 pb-4 justify-center">
-                    <div className="w-9/12">
-                        <div className="flex flex-row h-[calc(80vh-2rem)]">
-                            <div className="bg-no-repeat bg-slate-100 border border-slate-100 rounded-xl w-full mr-2 p-6" >
-                                <p className="text-center text-4xl font-bold ... italic text-slate-600 ">Welcome to Dashboard</p>
-
-                                <div className="flex justify-center overflow-y-scroll h-[600px]">
-                                    <table className=" mt-10 max-w-[1000px] w-[900px]  border-collapse border border-slate-500 rounded">
-                                        <thead>
-                                            <tr className="bg-lightgray">
-                                                <th className="w-1/4 py-4 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                                    Index
-                                                </th>
-                                                <th className="w-1/4 py-4 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                                    OrderID
-                                                </th>
-                                                <th className="w-1/4 py-4 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                                    Status
-                                                </th>
-                                                <th className="w-2/4 py-4 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                                    Action(Delivered?)
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {dashboarddata.map((data: DashboardData, index) => (
-                                                <tr key={index} className="p-4">
-                                                    <td className="py-4 px-6 border border-slate-700 text-center">{index + 1}</td>
-                                                    <td className="py-4 px-6 border border-slate-700 text-center">{data.order_id}</td>
-                                                    {data.delivery_status === "Pending" ? <td className="py-4 px-6 border border-slate-700 text-center text-red-500">Pending</td> : <td className="py-4 px-6 border border-slate-700 text-center  text-lime-700">Delivered</td>}
-                                                    {data.delivery_status === "Pending" && <td className=" border border-slate-700 text-center "><button type="button" className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900" onClick={() => deliveredorder(data.order_id)}>Order Delivered</button></td>}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+            <div className="container mx-auto p-6 max-w-md bg-white border-4 border-blue-600 rounded-lg">
+                <form className="space-y-4" onSubmit={handleSubmit(handlelogin)}>
+                    <h2 className="text-2xl font-bold text-center text-red-600">Login</h2>
+                    <div className="mb-4">
+                        <label htmlFor="email" className="block mb-2 font-bold">
+                            Email:
+                        </label>
+                        <input
+                            type="text"
+                            id="email"
+                            {...register("email", {
+                                required: "Email is Required!!",
+                            })}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                        {errors.email && (
+                            <p className="mt-1 text-red-600">{errors.email.message}</p>
+                        )}
                     </div>
-                </div>
-            </div>
-        </div >
-    );
-}
-
-export default Home;
-
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { State_user } from "../../../Types/reducer";
-import { useNavigate } from "react-router-dom";
-import SendIcon from '@mui/icons-material/Send';
-import instance from "../../../base-axios/useAxios";
-import { handleError } from "../../../utils/util";
-import { order } from "../../../Types/order";
-import socket from "../../../utils/socket";
-
-const Order: React.FC = () => {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const user = useSelector((state: State_user) => state.user);
-    const [orderData, setOrderData] = useState<order[]>([])
-    const getuserorderdetail = async () => {
-        await instance({
-            url: `order/getorderdetail/${user.id}`,
-            method: "GET",
-        }).then((res) => {
-            if (res.data.message === "Successfully get order Data") {
-                socket.emit('paymentMade', { userId: user.id, orderDetails: res.data.data.finalresult });
-                setOrderData(res.data.data.finalresult);
-            }
-        }).catch((error) => {
-            handleError(error, dispatch, navigate);
-        })
-    }
-    useEffect(() => {
-        getuserorderdetail();
-    }, [])
-
-
-    if (orderData.length === 0) {
-        return (
-            <div className="position">
-                <div className="p-5 ">
-                    <p className="text-center text-4xl font-bold ... italic text-slate-600">No Order Here at Now</p>
-                </div>
-                <div className="mt-10 ml-16 p-5">
-                    <p className="text-xl"><SendIcon className="mr-2" />Please Order Some Item first!!</p>
-                    <p className=" mt-5 ml-16 bg-slate-500 p-3 w-56 text-center text-xl text-slate-100 font-bold" onClick={() => navigate("/")}>Go for Order</p>
-                </div>
-            </div>
-        )
-    }
-    return (
-        <div className="position">
-            <div className="p-5">
-                <p className="text-center text-4xl font-bold ... italic text-slate-600">Your All Orders</p>
-            </div>
-            <div className="container">
-                <table className="table-auto mt-10 max-w-[1000px] w-[900px] border-collapse border border-slate-500 rounded">
-                    <thead>
-                        <tr className="bg-lightgray">
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                OrderId
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Items
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Total Amount
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Date
-                            </th>
-                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
-                                Status
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {orderData && orderData.map((data: order, index) => (
-                            <tr key={data.order_id} className="p-4">
-                                <td className="py-6 px-6 border border-slate-700 text-center">{index + 1}</td>
-                                <td className="py-6 px-6 border border-slate-700 text-center">{data.item_name}</td>
-                                <td className="py-6 px-6 border border-slate-700 text-center">{data.total_amount}</td>
-                                <td className="py-4 px-6 border border-slate-700 text-center">{`${new Date(data.date).toLocaleDateString()}`}</td>
-                                {data.delivery_status === "Success" ? <td className="py-4 px-6 border border-slate-700 text-center text-lime-700">{data.delivery_status}</td> : <td className="py-4 px-6 border border-slate-700 text-center  text-red-700 ">Pending</td>}
-                            </tr>
-                        ))}
-
-                    </tbody>
-                </table>
+                    <div className="mb-4">
+                        <label htmlFor="password" className="block mb-2 font-bold">
+                            Password:
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            {...register("password", {
+                                required: "Password is Required!!",
+                            })}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                        {errors.password && (
+                            <p className="mt-1 text-red-600">{errors.password.message}</p>
+                        )}
+                    </div>
+                    <div className="flex items-center justify-center mt-4 space-x-4">
+                        <p
+                            id="frgtpass"
+                            onClick={() => navigate("/forgetpassword")}
+                            className="w-40 p-2 text-center text-white bg-blue-500 rounded-md cursor-pointer hover:bg-blue-600"
+                        >
+                            Forget Password
+                        </p>
+                        <button
+                            type="submit"
+                            id="loginbtn"
+                            className="w-20 p-2 text-center text-white bg-blue-500 rounded-md cursor-pointer hover:bg-blue-600"
+                        >
+                            Login
+                        </button>
+                    </div>
+                    <div className="mt-4 text-center">
+                        <p>
+                            Don&apos;t  have an account?{" "}
+                            <Link to="/register" className="text-blue-500 underline">
+                                Register
+                            </Link>
+                        </p>
+                    </div>
+                </form>
             </div>
         </div>
     );
 };
 
-export default Order;
-
+export default Login;
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -337,7 +228,6 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
     const cart = useSelector((state: State) => state.cart);
     const driver_id = useSelector((state: State) => state.IDs.DriverID);
     const [notification, setNotification] = useState<NotificationData[]>([])
-
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
@@ -365,9 +255,8 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
         };
     }, []);
 
-
-
     const handleLogout = async () => {
+        socket.emit("leaveRoom", "drivers");
         if ((cart.cart).length !== 0) {
             await instance({
                 url: `cart/addtocart/${data.id}`,
@@ -439,3 +328,95 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
 };
 
 export default Header;
+
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { State_user } from "../../../Types/reducer";
+import { useNavigate } from "react-router-dom";
+import SendIcon from '@mui/icons-material/Send';
+import instance from "../../../base-axios/useAxios";
+import { handleError } from "../../../utils/util";
+import { order } from "../../../Types/order";
+import socket from "../../../utils/socket";
+
+const Order: React.FC = () => {
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const user = useSelector((state: State_user) => state.user);
+    const [orderData, setOrderData] = useState<order[]>([])
+    const getuserorderdetail = async () => {
+        await instance({
+            url: `order/getorderdetail/${user.id}`,
+            method: "GET",
+        }).then((res) => {
+            if (res.data.message === "Successfully get order Data") {
+                socket.emit('paymentMade', res.data.data.finalresult);
+                setOrderData(res.data.data.finalresult);
+            }
+        }).catch((error) => {
+            handleError(error, dispatch, navigate);
+        })
+    }
+    useEffect(() => {
+        getuserorderdetail();
+    }, [])
+
+
+    if (orderData.length === 0) {
+        return (
+            <div className="position">
+                <div className="p-5 ">
+                    <p className="text-center text-4xl font-bold ... italic text-slate-600">No Order Here at Now</p>
+                </div>
+                <div className="mt-10 ml-16 p-5">
+                    <p className="text-xl"><SendIcon className="mr-2" />Please Order Some Item first!!</p>
+                    <p className=" mt-5 ml-16 bg-slate-500 p-3 w-56 text-center text-xl text-slate-100 font-bold" onClick={() => navigate("/")}>Go for Order</p>
+                </div>
+            </div>
+        )
+    }
+    return (
+        <div className="position">
+            <div className="p-5">
+                <p className="text-center text-4xl font-bold ... italic text-slate-600">Your All Orders</p>
+            </div>
+            <div className="container  h-[700px] overflow-y-scroll ">
+                <table className="table-auto mt-10 max-w-[1000px] w-[900px] border-collapse border border-slate-500 rounded">
+                    <thead>
+                        <tr className="bg-lightgray">
+                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
+                                OrderId
+                            </th>
+                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
+                                Items
+                            </th>
+                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
+                                Total Amount
+                            </th>
+                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
+                                Date
+                            </th>
+                            <th className="w-1/4 py-3 px-6 text-center text-gray-600 font-bold border border-slate-600">
+                                Status
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orderData && orderData.map((data: order, index) => (
+                            <tr key={data.order_id} className="p-4">
+                                <td className="py-6 px-6 border border-slate-700 text-center">{index + 1}</td>
+                                <td className="py-6 px-6 border border-slate-700 text-center">{data.item_name}</td>
+                                <td className="py-6 px-6 border border-slate-700 text-center">{data.total_amount}</td>
+                                <td className="py-4 px-6 border border-slate-700 text-center">{`${new Date(data.date).toLocaleDateString()}`}</td>
+                                {data.delivery_status === "Success" ? <td className="py-4 px-6 border border-slate-700 text-center text-lime-700">{data.delivery_status}</td> : <td className="py-4 px-6 border border-slate-700 text-center  text-red-700 ">Pending</td>}
+                            </tr>
+                        ))}
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+export default Order;
