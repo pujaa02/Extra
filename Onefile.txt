@@ -1,0 +1,53 @@
+npm install @nestjs/typeorm typeorm pg
+
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { YourEntity } from './entities/your-entity.entity'; // Replace with your entity path
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(), // If using environment variables
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DB_HOST'),
+        port: +configService.get('DB_PORT'),
+        username: configService.get('DB_USERNAME'),
+        password: configService.get('DB_PASSWORD'),
+        database: configService.get('DB_NAME'),
+        entities: [YourEntity], // Add your entities here
+        synchronize: true, // Set to true for dev, false for production
+      }),
+    }),
+    TypeOrmModule.forFeature([YourEntity]), // Register your entities
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity()
+export class YourEntity {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  description?: string;
+}
+
+
+npm run start
+
+
+npm run typeorm migration:generate -- -n YourMigrationName
+
+
+npm run typeorm migration:run
