@@ -1,17 +1,27 @@
-import { Response } from '@nestjs/common';
+//controller.ts
+@Post()
+  @ApiConsumes('application/x-www-form-urlencoded')
+  adduser(@Body() body: UserCreateDto) {
+    try {
+      const result = this.userService.addUser(body);
+    } catch (error) {
+      return error;
+    }
+  }
 
-export function generalResponse(
-  response: Response,
-  data: object | string = {},
-  message: string = '',
-  responseType: boolean = false,
-  toast: boolean = false,
-  statusCode: number = 200,
-) {
-  response.status(statusCode).json({
-    data: data,
-    message: message,
-    toast: toast,
-    response_type: responseType,
-  });
-}
+//service.ts
+  async addUser(user: UserCreateDto) {
+    try {
+      const salt: string = uuidv4();
+      user.salt = salt;
+      user.password = await argon2.hash(user.password + salt);
+      const result = await this.userRepository.save(user);
+      return {
+        result,
+        success: true,
+        message: 'Successfully get all users',
+      };
+    } catch (error) {
+      return { success: false, message: 'Error occured' };
+    }
+  }
